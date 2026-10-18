@@ -1,0 +1,5 @@
+[
+  {"name": "Zenn AI", "url": "https://zenn.dev/topics/ai/feed", "category": "techniques"},
+  {"name": "Zenn LLM", "url": "https://zenn.dev/topics/llm/feed", "category": "techniques"},
+  {"name": "GitHub Blog AI & ML", "url": "https://github.blog/ai-and-ml/feed/", "category": "ai-tools"}
+]

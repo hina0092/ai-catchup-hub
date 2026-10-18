@@ -1,0 +1,3 @@
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Atom</title>
+<entry><title>Atom記事</title><link rel="self" href="https://example.com/api/1"/><link rel="alternate" href="https://example.com/new"/><published>2026-10-19T00:00:00Z</published><summary type="html">&lt;b&gt;Atom概要&lt;/b&gt;</summary></entry>
+</feed>

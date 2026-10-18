@@ -1,0 +1,6 @@
+<rss version="2.0"><channel><title>Fixture</title>
+<item><title>日本語の記事</title><link>https://EXAMPLE.com:443/post?utm_source=test&amp;id=1#top</link><pubDate>Sun, 18 Oct 2026 09:00:00 +0900</pubDate><description>&lt;p&gt;短い概要&lt;/p&gt;&lt;script&gt;alert(1)&lt;/script&gt;</description></item>
+<item><title>重複</title><link>https://example.com/post?id=1</link></item>
+<item><title>日付なし</title><link>https://example.com/unknown</link></item>
+<item><title>不正URL</title><link>javascript:alert(1)</link></item>
+</channel></rss>

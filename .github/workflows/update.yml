@@ -1,0 +1,69 @@
+# Runs only after this app is placed at the root of its own repository.
+name: Test, collect and publish
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 10 * * *' # 19:17 JST; actual start can be delayed.
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Test collector and release packaging
+        run: python -m unittest discover -s tests -v
+      - name: Collect fresh public feeds
+        run: python collector/collect.py --overwrite
+      - name: Remove excerpts from deployment data
+        run: python tools/public_feed.py frontend/public/data/articles.json
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11.25.0'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install locked dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Build static site
+        working-directory: frontend
+        run: pnpm build
+      - name: Upload only the built site
+        if: github.event_name != 'pull_request' && vars.ENABLE_PAGES_DEPLOY == 'true'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: frontend/dist
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.ENABLE_PAGES_DEPLOY == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy built site
+        id: deployment
+        uses: actions/deploy-pages@v4
