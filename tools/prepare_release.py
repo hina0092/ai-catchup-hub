@@ -5,7 +5,17 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
+    'frontend/src/feed.js', 'frontend/src/savedArticles.js', 'frontend/src/useSavedArticles.js',
+    'frontend/src/components/FeedTabs.vue', 'frontend/src/components/SaveControls.vue',
+    'frontend/tests/feed.test.mjs', 'frontend/tests/saved.test.mjs',
+    'collector/analyze_discussions.py', 'collector/analysis_config.json',
+    'tests/test_analysis.py', 'frontend/src/discussion.js',
+    'frontend/src/components/DiscussionDetail.vue', 'frontend/tests/discussion.test.mjs',
+    'collector/discussions.py', 'tests/test_discussions.py',
     '.gitignore', '.github/workflows/update.yml',
+    'collector/translate.py', 'collector/translation_config.json',
+    'tests/test_translation.py', 'frontend/tests/article-text.test.mjs',
+    'frontend/src/components/ArticleText.vue',
     'collector/collect.py', 'collector/sources.json', 'collector/requirements.txt',
     'tests/test_collector.py', 'tests/test_release.py',
     'tests/fixtures/rss.xml', 'tests/fixtures/atom.xml',

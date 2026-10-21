@@ -1,0 +1,17 @@
+{
+  "enabled": false,
+  "model": "",
+  "max_requests": 2,
+  "max_input_bytes": 16000,
+  "max_output_tokens": 1800,
+  "max_run_tokens": 40000,
+  "max_run_usd": 0.05,
+  "max_month_usd": 0.50,
+  "input_usd_per_million": null,
+  "output_usd_per_million": null,
+  "max_stories": 2,
+  "max_comments": 15,
+  "max_comment_chars": 1200,
+  "max_hn_requests": 40,
+  "max_hn_seconds": 120
+}

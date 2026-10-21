@@ -9,8 +9,9 @@ from tools.public_feed import public_articles
 
 class ReleaseTests(unittest.TestCase):
     def test_public_data_omits_excerpts_and_preserves_original(self):
-        rows = [{'title': 'Title', 'summary': 'Excerpt'}]
+        rows = [{'title': 'Title', 'summary': 'Excerpt', 'translation': {'title_ja': '翻訳'}}]
         self.assertNotIn('summary', public_articles(rows)[0])
+        self.assertEqual(public_articles(rows)[0]['translation'], {'title_ja': '翻訳'})
         self.assertEqual(rows[0]['summary'], 'Excerpt')
 
     def test_archive_contains_only_allowlisted_sources(self):
