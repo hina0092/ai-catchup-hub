@@ -146,6 +146,12 @@ def collect(sources, fetcher=fetch):
     for source in sources:
         try:
             entries = parse_feed(fetcher(source['url']), source, now)
+            limit = source.get('max_articles')
+            if limit is not None:
+                if type(limit) is not int or limit < 1:
+                    raise ValueError('max_articles must be a positive integer')
+                unique = {entry['url']: entry for entry in reversed(entries)}
+                entries = sorted(unique.values(), key=lambda item: (item['published_at'] or '', item['url']), reverse=True)[:limit]
         except (OSError, ValueError, ET.ParseError) as error:
             LOG.warning('%s: failed: %s', source['name'], error)
             continue
@@ -196,6 +202,8 @@ def main(argv=None):
                 raise ValueError('each source requires name, url and category strings')
             if not normalize_url(source['url']):
                 raise ValueError('invalid source URL')
+            if 'max_articles' in source and (type(source['max_articles']) is not int or source['max_articles'] < 1):
+                raise ValueError('max_articles must be a positive integer')
         articles, successes = collect(sources)
         if not successes or not articles:
             raise ValueError('no usable articles; existing output preserved')

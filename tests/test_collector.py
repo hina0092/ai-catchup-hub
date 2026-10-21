@@ -12,6 +12,21 @@ SOURCE = {'name': 'Fixture', 'url': 'https://example.com/feed', 'category': 'tec
 
 
 class CollectorTests(unittest.TestCase):
+    def test_source_limit_deduplicates_and_sorts_before_selecting(self):
+        data = b'<rss><channel><item><title>Old</title><link>https://example.com/old</link><pubDate>Mon, 19 Oct 2026 00:00:00 GMT</pubDate></item><item><title>New</title><link>https://example.com/new</link><pubDate>Tue, 20 Oct 2026 00:00:00 GMT</pubDate></item><item><title>Duplicate</title><link>https://example.com/new</link></item><item><title>Unknown</title><link>https://example.com/unknown</link></item></channel></rss>'
+        rows, successes = collect([{**SOURCE, 'max_articles': 2}], lambda _: data)
+        self.assertEqual(successes, 1)
+        self.assertEqual([r['title'] for r in rows], ['New', 'Old'])
+
+    def test_invalid_source_limit_is_rejected_before_network(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / 'sources.json'
+            for value in (0, -1, True, '10', None):
+                config.write_text(json.dumps([{**SOURCE, 'max_articles': value}]), encoding='utf-8')
+                with patch('collector.collect.collect') as mocked:
+                    self.assertEqual(main(['--sources', str(config), '--output', str(Path(directory) / 'out.json')]), 1)
+                    mocked.assert_not_called()
+
     def test_rss_fields_and_sanitizing(self):
         rows = parse_feed((FIXTURES / 'rss.xml').read_bytes(), SOURCE, 'now')
         self.assertEqual(len(rows), 3)

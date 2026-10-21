@@ -1,5 +1,13 @@
 [
   {"name": "Zenn AI", "url": "https://zenn.dev/topics/ai/feed", "category": "techniques"},
   {"name": "Zenn LLM", "url": "https://zenn.dev/topics/llm/feed", "category": "techniques"},
-  {"name": "GitHub Blog AI & ML", "url": "https://github.blog/ai-and-ml/feed/", "category": "ai-tools"}
+  {"name": "GitHub Blog AI & ML", "url": "https://github.blog/ai-and-ml/feed/", "category": "ai-tools"},
+  {"name": "Qiita AI", "url": "https://qiita.com/tags/ai/feed", "category": "techniques", "max_articles": 10},
+  {"name": "Qiita Python", "url": "https://qiita.com/tags/python/feed", "category": "techniques", "max_articles": 10},
+  {"name": "Qiita C#", "url": "https://qiita.com/tags/csharp/feed", "category": "techniques", "max_articles": 10},
+  {"name": "Qiita Excel", "url": "https://qiita.com/tags/excel/feed", "category": "business", "max_articles": 10},
+  {"name": "Qiita GIS", "url": "https://qiita.com/tags/gis/feed", "category": "techniques", "max_articles": 10},
+  {"name": "Microsoft .NET", "url": "https://devblogs.microsoft.com/dotnet/feed/", "category": "techniques", "max_articles": 10},
+  {"name": "Microsoft Python", "url": "https://devblogs.microsoft.com/python/feed/", "category": "techniques", "max_articles": 10},
+  {"name": "AWS AI", "url": "https://aws.amazon.com/blogs/machine-learning/feed/", "category": "ai-tools", "max_articles": 10}
 ]
