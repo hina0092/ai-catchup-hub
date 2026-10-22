@@ -1,5 +1,7 @@
 {
-  "attempts": {},
+  "attempts": {
+    "https://aws.amazon.com/blogs/machine-learning/amazon-polly-delivers-a-major-upgrade-to-its-generative-engine/": "2026-10-23"
+  },
   "entries": {},
   "format": 1
 }
