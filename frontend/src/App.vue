@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { enrichment } from './enrichment.js'
 import ArticleText from './components/ArticleText.vue'
 import DiscussionDetail from './components/DiscussionDetail.vue'
 import { discussionFor, discussionHash, routeFromHash } from './discussion.js'
@@ -90,7 +91,7 @@ onUnmounted(() => {window.removeEventListener('hashchange', syncRoute);clearInte
       <ol class="spotlight-grid"><li v-for="(article,index) in spotlight.items" :key="article.url">
         <span class="spotlight-number">0{{ index+1 }}</span>
         <p class="spotlight-reason">{{ recommendationReason(article) }}</p>
-        <h3><a :href="article.url" target="_blank" rel="noopener noreferrer">{{ article.translation?.title_ja || article.title }}<span class="sr-only">（元記事を新しいタブで開く）</span></a></h3>
+        <h3><a :href="article.url" target="_blank" rel="noopener noreferrer">{{ enrichment(article)?.title_ja || article.translation?.title_ja || article.title }}<span class="sr-only">（元記事を新しいタブで開く）</span></a></h3>
         <small>{{ article.source }} · {{ dateLabel(article.published_at) }}</small>
       </li></ol>
     </section>
@@ -123,7 +124,7 @@ onUnmounted(() => {window.removeEventListener('hashchange', syncRoute);clearInte
             <p v-if="article.saved_snapshot" class="saved-note">保存時の情報 · 現在のフィード掲載外</p>
             <ArticleText :article="article" />
             <p v-if="tab==='recommended'" class="recommendation-note">{{ recommendationReason(article) }}</p>
-            <aside v-if="applicationIdea(article)" class="application-idea"><strong>活用アイデア（提案）</strong><p>{{ applicationIdea(article) }}</p><small>記事の事実とは別の、関心分野に基づく提案です。</small></aside>
+            <aside v-if="!enrichment(article) && applicationIdea(article)" class="application-idea"><strong>活用アイデア（提案）</strong><p>{{ applicationIdea(article) }}</p><small>記事の事実とは別の、関心分野に基づく提案です。</small></aside>
             <a v-if="discussionFor(article)" class="discussion-link" :href="discussionHash(article)" :aria-label="article.title + ' の議論を見る'">{{ commentCount(article)===null ? 'コメント数不明' : commentCount(article)+'件のコメント' }} · 議論を見る →</a>
             <SaveControls :article="article" :labels="saved.labels(article)" @toggle="saved.toggle(article,$event)" />
             <div class="card-footer"><div><span class="source">{{ article.source }}</span><time v-if="article.published_at" :datetime="article.published_at">{{ dateLabel(article.published_at) }}</time><span v-else class="date">公開日不明</span></div><a class="read-link" :href="article.url" target="_blank" rel="noopener noreferrer" :aria-label="article.title+' の元記事を読む（新しいタブ）'">元記事へ <span aria-hidden="true">↗</span></a></div>

@@ -5,6 +5,9 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
+    'collector/gemini.py', 'collector/gemini_config.json', 'collector/article_source.py',
+    'tools/ai_cache.py', 'tests/test_gemini.py', 'tests/test_ai_cache.py',
+    'frontend/src/enrichment.js', 'frontend/tests/enrichment.test.mjs',
     'frontend/src/feed.js', 'frontend/src/savedArticles.js', 'frontend/src/useSavedArticles.js',
     'frontend/src/components/FeedTabs.vue', 'frontend/src/components/SaveControls.vue',
     'frontend/tests/feed.test.mjs', 'frontend/tests/saved.test.mjs',

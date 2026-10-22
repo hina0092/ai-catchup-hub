@@ -1,3 +1,4 @@
+import { enrichment } from './enrichment.js'
 export const STORAGE_KEY = 'ai-catchup-hub.saved.v1'
 export const saveKinds = [['read','あとで読む'],['try','試したい'],['work','仕事に使えそう']]
 const kinds = new Set(saveKinds.map(([id])=>id))
@@ -11,6 +12,8 @@ export function snapshot(article) {
   if(!url || typeof article.title!=='string' || !article.title.trim()) throw new Error('invalid article')
   const result={url,title:article.title.slice(0,500),source:typeof article.source==='string'?article.source.slice(0,160):'情報源不明'}
   for(const key of ['id','category','published_at','collected_at','summary']) if(typeof article[key]==='string') result[key]=article[key].slice(0,500)
+  const ai=enrichment(article)
+  if(ai) Object.assign(result,ai)
   const t=article.translation
   if(t?.language==='ja' && typeof t.title_ja==='string') result.translation={language:'ja',title_ja:t.title_ja.slice(0,500),summary_ja:typeof t.summary_ja==='string'?t.summary_ja.slice(0,500):null}
   const d=article.discussion

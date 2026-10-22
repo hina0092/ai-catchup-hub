@@ -3,12 +3,8 @@ name: Test, collect and publish
 on:
   workflow_dispatch:
     inputs:
-      initialize_analysis_cache:
-        description: 'Initialize missing discussion analysis budget ledger (approval required; first run only)'
-        type: boolean
-        default: false
-      initialize_translation_cache:
-        description: 'Initialize missing AI budget ledger (approval required; first run only)'
+      initialize_gemini_cache:
+        description: 'Create ai-cache branch only on first approved setup (never reset existing cache)'
         type: boolean
         default: false
   schedule:
@@ -27,6 +23,8 @@ concurrency:
 
 jobs:
   build:
+    permissions:
+      contents: write # ai-cache only; application checkout never retains credentials
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -40,60 +38,29 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Collect fresh public feeds
         run: python collector/collect.py --overwrite
-      - name: Restore translation and budget cache
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: actions/cache/restore@v4
-        with:
-          path: .cache/translations.sqlite3
-          key: translation-v1-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: translation-v1-
-      - name: Enrich articles with optional Japanese translations
+      - name: Load durable Gemini cache
+        id: gemini_cache
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         continue-on-error: true
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ENABLE_AI_TRANSLATION: ${{ vars.ENABLE_AI_TRANSLATION }}
-          INITIALIZE_CACHE: ${{ github.event_name == 'workflow_dispatch' && inputs.initialize_translation_cache }}
-        shell: bash
-        run: |
-          flags=()
-          if [ "$ENABLE_AI_TRANSLATION" = "true" ]; then flags+=(--allow-api); fi
-          if [ "$INITIALIZE_CACHE" = "true" ]; then flags+=(--initialize-cache); fi
-          python collector/translate.py --output frontend/public/data/articles.json --overwrite "${flags[@]}"
-      - name: Persist translations and reserved budget even after partial failure
-        if: always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: actions/cache/save@v4
-        with:
-          path: .cache/translations.sqlite3
-          key: translation-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          GH_TOKEN: ${{ github.token }}
+          INITIALIZE_GEMINI_CACHE: ${{ github.event_name == 'workflow_dispatch' && inputs.initialize_gemini_cache }}
+        run: python tools/ai_cache.py "${{ runner.temp }}/hub-ai-cache"
+      - name: Apply cached summaries and optionally generate with free Gemini
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.gemini_cache.outcome == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ENABLE_GEMINI: ${{ vars.ENABLE_GEMINI }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
+          GEMINI_BILLING_DISABLED: ${{ vars.GEMINI_BILLING_DISABLED }}
+          GEMINI_FREE_TIER_REVIEWED_ON: ${{ vars.GEMINI_FREE_TIER_REVIEWED_ON }}
+        run: python -m collector.gemini --cache-dir "${{ runner.temp }}/hub-ai-cache"
       - name: Collect optional Hacker News discussion metadata
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.ENABLE_HN_DISCUSSIONS == 'true'
         continue-on-error: true
         run: python collector/discussions.py --output frontend/public/data/articles.json --overwrite --allow-api
-      - name: Restore discussion analysis cache
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.ENABLE_DISCUSSION_ANALYSIS == 'true'
-        uses: actions/cache/restore@v4
-        with:
-          path: .cache/discussion-analysis.sqlite3
-          key: discussion-analysis-v1-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: discussion-analysis-v1-
-      - name: Analyze verified Hacker News comments
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.ENABLE_HN_DISCUSSIONS == 'true' && vars.ENABLE_DISCUSSION_ANALYSIS == 'true'
-        continue-on-error: true
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          INITIALIZE_CACHE: ${{ github.event_name == 'workflow_dispatch' && inputs.initialize_analysis_cache }}
-        shell: bash
-        run: |
-          flags=()
-          if [ "$INITIALIZE_CACHE" = "true" ]; then flags+=(--initialize-cache); fi
-          python collector/analyze_discussions.py --output frontend/public/data/articles.json --overwrite --allow-hn --allow-ai "${flags[@]}"
-      - name: Persist analysis cache and budget
-        if: always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.ENABLE_DISCUSSION_ANALYSIS == 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: .cache/discussion-analysis.sqlite3
-          key: discussion-analysis-v1-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Remove excerpts from final deployment data
         run: python tools/public_feed.py frontend/public/data/articles.json
       - uses: pnpm/action-setup@v4
