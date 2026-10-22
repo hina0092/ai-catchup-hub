@@ -3,6 +3,10 @@ name: Test, collect and publish
 on:
   workflow_dispatch:
     inputs:
+      test_one_article:
+        description: 'Approved one-time free-tier API test: at most one article; does not enable scheduled generation'
+        type: boolean
+        default: false
       initialize_gemini_cache:
         description: 'Create ai-cache branch only on first approved setup (never reset existing cache)'
         type: boolean
@@ -56,7 +60,20 @@ jobs:
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
           GEMINI_BILLING_DISABLED: ${{ vars.GEMINI_BILLING_DISABLED }}
           GEMINI_FREE_TIER_REVIEWED_ON: ${{ vars.GEMINI_FREE_TIER_REVIEWED_ON }}
-        run: python -m collector.gemini --cache-dir "${{ runner.temp }}/hub-ai-cache"
+          GEMINI_ONE_ARTICLE_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.test_one_article }}
+        run: |
+          python - <<'PY'
+          import json, os, subprocess, sys
+          from pathlib import Path
+          config = json.loads(Path('collector/gemini_config.json').read_text())
+          if os.environ.get('GEMINI_ONE_ARTICLE_TEST') == 'true':
+              config.update(enabled=True, max_articles=1)
+              os.environ['ENABLE_GEMINI'] = 'true'
+          path = Path(os.environ['RUNNER_TEMP']) / 'gemini-run-config.json'
+          path.write_text(json.dumps(config))
+          sys.exit(subprocess.call([sys.executable, '-m', 'collector.gemini', '--config', str(path),
+                                    '--cache-dir', str(path.parent / 'hub-ai-cache')]))
+          PY
       - name: Collect optional Hacker News discussion metadata
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.ENABLE_HN_DISCUSSIONS == 'true'
         continue-on-error: true
