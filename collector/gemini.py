@@ -24,6 +24,26 @@ MODELS = {'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'}
 JAPANESE = re.compile(r'[\u3040-\u30ff\u3400-\u9fff]')
 NO_IDEA = '直接的な業務活用例は未確認'
 FIELDS = ('title_ja', 'summary_ja', 'key_points', 'work_idea')
+LOGGER = logging.getLogger(__name__)
+
+
+class InvalidAIResult(ValueError):
+    """Only controlled codes and field names may reach diagnostic logs."""
+    CODES = {'type', 'length', 'language', 'markup', 'count', 'duplicate',
+             'json', 'schema', 'insufficient_evidence', 'incomplete_response', 'response_too_large'}
+
+    def __init__(self, code, field='response'):
+        self.code = code if code in self.CODES else 'schema'
+        self.field = field if field in (*FIELDS, 'response') else 'response'
+        super().__init__(self.code)
+
+
+def diagnostic(reason, field='response', basis='unknown', input_chars=0):
+    # No exception text, URLs, article text, headers, keys, or raw AI output.
+    LOGGER.warning('Gemini rejected: reason=%s field=%s source_basis=%s input_chars=%d',
+                   reason, field, basis, input_chars)
+
+
 META = ('ai_status', 'ai_model', 'ai_version', 'source_basis', 'ai_generated_at')
 SCHEMA = {'type': 'object', 'properties': {
     'sufficient': {'type': 'boolean'},
@@ -44,20 +64,37 @@ work_idea: 100〜200文字の提案。保守改修、レガシー解析・文書
 
 def validate(value, original_title=None):
     if not isinstance(value, dict):
-        raise ValueError('invalid result')
+        raise InvalidAIResult('type')
     result = {k: value.get(k) for k in FIELDS}
     for key, low, high in [('title_ja', 1, 300), ('summary_ja', 150, 250), ('work_idea', 100, 200)]:
         text = result[key]
         if key == 'work_idea' and text == NO_IDEA:
             continue
-        if not isinstance(text, str) or not low <= len(text.strip()) <= high or not JAPANESE.search(text) or '<' in text or '>' in text:
-            raise ValueError('invalid text')
+        if not isinstance(text, str):
+            raise InvalidAIResult('type', key)
+        if not low <= len(text.strip()) <= high:
+            raise InvalidAIResult('length', key)
+        if not JAPANESE.search(text):
+            raise InvalidAIResult('language', key)
+        if '<' in text or '>' in text:
+            raise InvalidAIResult('markup', key)
         result[key] = text.strip()
     points = result['key_points']
-    if not isinstance(points, list) or len(points) != 3 or len(set(p for p in points if isinstance(p, str))) != 3:
-        raise ValueError('invalid points')
-    if any(not isinstance(p, str) or not 30 <= len(p.strip()) <= 60 or not JAPANESE.search(p) or '<' in p or '>' in p for p in points):
-        raise ValueError('invalid point')
+    if not isinstance(points, list):
+        raise InvalidAIResult('type', 'key_points')
+    if len(points) != 3:
+        raise InvalidAIResult('count', 'key_points')
+    if any(not isinstance(p, str) for p in points):
+        raise InvalidAIResult('type', 'key_points')
+    if len(set(p.strip() for p in points)) != 3:
+        raise InvalidAIResult('duplicate', 'key_points')
+    for point in points:
+        if not 30 <= len(point.strip()) <= 60:
+            raise InvalidAIResult('length', 'key_points')
+        if not JAPANESE.search(point):
+            raise InvalidAIResult('language', 'key_points')
+        if '<' in point or '>' in point:
+            raise InvalidAIResult('markup', 'key_points')
     result['key_points'] = [p.strip() for p in points]
     if original_title and JAPANESE.search(original_title):
         result['title_ja'] = original_title
@@ -84,17 +121,29 @@ def request_gemini(model, key, title, content):
     with build_opener(NoRedirect).open(req, timeout=45) as response:
         raw = response.read(1_000_001)
     if len(raw) > 1_000_000:
-        raise ValueError('response too large')
-    data = json.loads(raw)
+        raise InvalidAIResult('response_too_large')
+    try:
+        data = json.loads(raw)
+    except (ValueError, UnicodeError):
+        raise InvalidAIResult('json') from None
     if not isinstance(data, dict):
-        raise ValueError('invalid response object')
+        raise InvalidAIResult('schema')
     candidates = data.get('candidates', [])
     if not isinstance(candidates, list) or len(candidates) != 1 or not isinstance(candidates[0], dict) or candidates[0].get('finishReason') != 'STOP':
-        raise ValueError('incomplete response')
-    text = ''.join(p.get('text', '') for p in candidates[0]['content']['parts'] if not p.get('thought'))
-    result = json.loads(text)
-    if not isinstance(result, dict) or set(result) != {'sufficient', *FIELDS} or result['sufficient'] is not True:
-        raise ValueError('insufficient evidence')
+        raise InvalidAIResult('incomplete_response')
+    content = candidates[0].get('content')
+    parts = content.get('parts') if isinstance(content, dict) else None
+    if not isinstance(parts, list) or any(not isinstance(p, dict) or not isinstance(p.get('text', ''), str) for p in parts):
+        raise InvalidAIResult('schema')
+    text = ''.join(p.get('text', '') for p in parts if not p.get('thought'))
+    try:
+        result = json.loads(text)
+    except ValueError:
+        raise InvalidAIResult('json') from None
+    if not isinstance(result, dict) or set(result) != {'sufficient', *FIELDS} or type(result.get('sufficient')) is not bool:
+        raise InvalidAIResult('schema')
+    if result['sufficient'] is False:
+        raise InvalidAIResult('insufficient_evidence')
     return validate(result, title)
 
 
@@ -161,6 +210,7 @@ def enrich(rows, cache, config, env, persist, provider=request_gemini, reader=ar
         try:
             persist(cache)
         except (OSError, ValueError):
+            diagnostic('cache_write_before_request', basis=basis, input_chars=len(content))
             stats['stopped'] = True
             live = False
             continue
@@ -168,6 +218,7 @@ def enrich(rows, cache, config, env, persist, provider=request_gemini, reader=ar
         try:
             result = validate(provider(model, env['GEMINI_API_KEY'], row['title'], content), row['title'])
         except HTTPError as error:
+            diagnostic('rate_limit' if error.code == 429 else 'http_error', basis=basis, input_chars=len(content))
             stats['failed'] += 1
             # All HTTP errors stop the run; rate limits additionally stop today's runs.
             if error.code == 429:
@@ -179,10 +230,16 @@ def enrich(rows, cache, config, env, persist, provider=request_gemini, reader=ar
             live = False
             stats['stopped'] = True
             continue
+        except InvalidAIResult as error:
+            diagnostic(error.code, error.field, basis, len(content))
+            stats['failed'] += 1
+            continue
         except (ValueError, TypeError, KeyError):
+            diagnostic('invalid_response', basis=basis, input_chars=len(content))
             stats['failed'] += 1
             continue
         except OSError:
+            diagnostic('network_error', basis=basis, input_chars=len(content))
             stats['failed'] += 1
             live = False
             stats['stopped'] = True
@@ -192,6 +249,7 @@ def enrich(rows, cache, config, env, persist, provider=request_gemini, reader=ar
         try:
             persist(cache)
         except (OSError, ValueError):
+            diagnostic('cache_write_after_response', basis=basis, input_chars=len(content))
             del cache['entries'][url]
             stats['failed'] += 1
             live = False
