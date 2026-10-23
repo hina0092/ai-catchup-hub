@@ -9,6 +9,16 @@ const server=await createServer({server:{middlewareMode:true,hmr:false,ws:false}
 after(()=>server.close())
 const {default:ArticleText}=await server.ssrLoadModule('/src/components/ArticleText.vue')
 const row={title:'Original English title',url:'https://example.com/article',source:'Fixture',title_ja:'日本語の見出し',summary_ja:'記事に書かれた内容を日本語で説明します。'.repeat(9),key_points:['特徴を根拠に沿って説明します。','効果について入力の範囲で説明します。','注意点について原文を確認します。'].map(s=>s.repeat(3)),work_idea:'直接的な業務活用例は未確認',ai_status:'completed',ai_model:'gemini-3.5-flash-lite',ai_version:1,source_basis:'article',ai_generated_at:'2026-10-22T00:00:00+09:00'}
+test('short summaries render and survive saved storage; empty and oversized fall back',async()=>{
+  for(const summary of ['短い要約です。','あ'.repeat(140),'あ'.repeat(250)]) {
+    const article={...row,summary_ja:summary}
+    const html=await renderToString(createSSRApp(ArticleText,{article}))
+    assert.ok(html.includes(summary))
+    const decoded=decodeSaved(JSON.stringify({version:1,items:[{url:row.url,article:snapshot(article),labels:['read'],saved_at:'2026-10-24T00:00:00Z'}]}))
+    assert.equal(decoded[0].article.summary_ja,summary)
+  }
+  for(const summary of ['', '   ', 'あ'.repeat(251)]) assert.equal(enrichment({...row,summary_ja:summary}),null)
+})
 test('Japanese summary, collapsible points, proposal label and original title',async()=>{
   assert.ok(enrichment(row))
   const html=await renderToString(createSSRApp(ArticleText,{article:row}))

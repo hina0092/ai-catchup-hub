@@ -20,15 +20,15 @@ def cache():
 
 class GeminiTests(TestCase):
     def test_length_diagnostic_reports_counts_not_text(self):
-        for size in (149, 251):
+        for size in (251, 300):
             with self.subTest(size=size), self.assertLogs('collector.gemini', level='WARNING') as logs:
                 self.run_enrich(provider=Mock(return_value={**RESULT, 'summary_ja': ' あ' + 'い' * (size - 1) + ' '}))
             message = '\n'.join(logs.output)
-            self.assertIn(f'actual_chars={size} min_chars=150 max_chars=250', message)
+            self.assertIn(f'actual_chars={size} min_chars=1 max_chars=250', message)
             self.assertNotIn('あ', message)
 
     def test_length_boundaries_and_work_idea_exception(self):
-        for field, low, high in [('title_ja', 1, 300), ('summary_ja', 150, 250), ('work_idea', 100, 200)]:
+        for field, low, high in [('title_ja', 1, 300), ('summary_ja', 1, 250), ('work_idea', 100, 200)]:
             for size in (low, high):
                 self.assertEqual(len(validate({**RESULT, field: 'あ' * size})[field]), size)
             for size in (low - 1, high + 1):
@@ -43,7 +43,7 @@ class GeminiTests(TestCase):
 
     def test_diagnostics_distinguish_fields_without_leaking_payload(self):
         for change, reason, field in [
-            ({'summary_ja': 'SECRET'}, 'length', 'summary_ja'),
+            ({'summary_ja': 'SECRET' * 50}, 'length', 'summary_ja'),
             ({'key_points': []}, 'count', 'key_points'),
             ({'work_idea': 123}, 'type', 'work_idea'),
             ({'title_ja': 'SECRET'}, 'language', 'title_ja'),
@@ -158,7 +158,7 @@ class GeminiTests(TestCase):
 
     def test_schema_bounds_and_no_idea(self):
         self.assertEqual(validate({**RESULT,'work_idea':NO_IDEA})['work_idea'],NO_IDEA)
-        for change in [dict(summary_ja='短い'),dict(key_points=['短い']*3),dict(title_ja=42),dict(work_idea='a'*120)]:
+        for change in [dict(summary_ja='   '),dict(key_points=['短い']*3),dict(title_ja=42),dict(work_idea='a'*120)]:
             with self.assertRaises(ValueError): validate({**RESULT,**change})
 
     def test_http_adapter_schema_no_tools_and_redirection_block(self):
