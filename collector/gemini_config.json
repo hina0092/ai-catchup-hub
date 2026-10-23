@@ -1,5 +1,5 @@
 {
-  "enabled": false,
+  "enabled": true,
   "max_articles": 5,
   "interval_seconds": 15,
   "max_input_chars": 12000,
