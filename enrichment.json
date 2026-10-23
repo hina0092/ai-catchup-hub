@@ -1,6 +1,7 @@
 {
   "attempts": {
-    "https://aws.amazon.com/blogs/machine-learning/amazon-polly-delivers-a-major-upgrade-to-its-generative-engine/": "2026-10-23"
+    "https://aws.amazon.com/blogs/machine-learning/amazon-polly-delivers-a-major-upgrade-to-its-generative-engine/": "2026-10-23",
+    "https://zenn.dev/libelab/articles/claude-company-day2": "2026-10-24"
   },
   "entries": {},
   "format": 1
