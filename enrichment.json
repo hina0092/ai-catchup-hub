@@ -9,6 +9,21 @@
     "https://zenn.dev/xlmen/articles/33a73874f91dd0": "2026-10-24"
   },
   "entries": {
+    "https://zenn.dev/matsushima_a/articles/day-024-ponytail-lazy-senior-dev": {
+      "ai_generated_at": "2026-10-24T01:03:53.903960+09:00",
+      "ai_model": "gemini-3.5-flash-lite",
+      "ai_status": "completed",
+      "ai_version": 3,
+      "key_points": [
+        "既存コードや標準ライブラリの再利用をエージェントに優先させるルールセットである。",
+        "公式ベンチマークではコード行数やトークン数、コストや時間の削減が主張されている。",
+        "コーディングエージェントの動作を制御し無駄なコード追加を防ぐアプローチである。"
+      ],
+      "source_basis": "rss",
+      "summary_ja": "GitHub Trendingで注目されたponytailは、コーディングエージェントに怠惰なシニア開発者を演じさせ、既存コードや標準機能の再利用を優先させるルールセットです。公式ベンチマークの削減効果について実測を行った記事です。",
+      "title_ja": "「怠惰なシニア開発者」をClaude Codeに演じさせたら本当にコードは減るのか(ponytail実測)",
+      "work_idea": "開発テストレビューの観点において、エージェントによるコード生成時のルール適用効果を検証する際の参考資料として活用できます。ただし、実際の業務環境での効果や安全性は個別の検証が必要となるため、直接的な業務活用例は未確認です。"
+    },
     "https://zenn.dev/xlmen/articles/33a73874f91dd0": {
       "ai_generated_at": "2026-10-24T01:03:53.903960+09:00",
       "ai_model": "gemini-3.5-flash-lite",
