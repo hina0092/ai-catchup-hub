@@ -6,6 +6,22 @@
     "https://zenn.dev/libelab/articles/claude-company-day2": "2026-10-24",
     "https://zenn.dev/xlmen/articles/33a73874f91dd0": "2026-10-24"
   },
-  "entries": {},
+  "entries": {
+    "https://zenn.dev/xlmen/articles/33a73874f91dd0": {
+      "ai_generated_at": "2026-10-24T01:03:53.903960+09:00",
+      "ai_model": "gemini-3.5-flash-lite",
+      "ai_status": "completed",
+      "ai_version": 3,
+      "key_points": [
+        "PLCやサーボの大まかな知識を持つコード未経験者がClaude Codeを活用している。",
+        "ブラウザ上で動作するサーボ制御のシミュレータを一日で作成することに成功した。",
+        "作成したシミュレータは非公式の学習用であり、実機の数値とは異なる簡易モデルである。"
+      ],
+      "source_basis": "rss",
+      "summary_ja": "PLCやサーボの知識を持つがコードは書けない執筆者が、Claude Codeを活用してブラウザで動作するサーボ制御のシミュレータを作成した試みについての記事です。非公式の学習用ツールであり、数値は簡易モデルとなっています。",
+      "title_ja": "PLC の知識はあるけどコードは書けない私が、Claude Code にサーボのシミュレータを作らせた 1 日【非公式】",
+      "work_idea": "直接的な業務活用例は未確認"
+    }
+  },
   "format": 1
 }
