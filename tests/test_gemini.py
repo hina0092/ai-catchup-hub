@@ -19,6 +19,28 @@ def cache():
     return dict(format=1, entries={}, attempts={})
 
 class GeminiTests(TestCase):
+    def test_length_diagnostic_reports_counts_not_text(self):
+        for size in (149, 251):
+            with self.subTest(size=size), self.assertLogs('collector.gemini', level='WARNING') as logs:
+                self.run_enrich(provider=Mock(return_value={**RESULT, 'summary_ja': ' あ' + 'い' * (size - 1) + ' '}))
+            message = '\n'.join(logs.output)
+            self.assertIn(f'actual_chars={size} min_chars=150 max_chars=250', message)
+            self.assertNotIn('あ', message)
+
+    def test_length_boundaries_and_work_idea_exception(self):
+        for field, low, high in [('title_ja', 1, 300), ('summary_ja', 150, 250), ('work_idea', 100, 200)]:
+            for size in (low, high):
+                self.assertEqual(len(validate({**RESULT, field: 'あ' * size})[field]), size)
+            for size in (low - 1, high + 1):
+                with self.assertRaises(InvalidAIResult) as caught:
+                    validate({**RESULT, field: 'あ' * size})
+                self.assertEqual(caught.exception.lengths, (size, low, high))
+        for size in (29, 61):
+            with self.assertRaises(InvalidAIResult) as caught:
+                validate({**RESULT, 'key_points': ['あ' * size, *RESULT['key_points'][1:]]})
+            self.assertEqual(caught.exception.lengths, (size, 30, 60))
+        self.assertEqual(validate({**RESULT, 'work_idea': NO_IDEA})['work_idea'], NO_IDEA)
+
     def test_diagnostics_distinguish_fields_without_leaking_payload(self):
         for change, reason, field in [
             ({'summary_ja': 'SECRET'}, 'length', 'summary_ja'),
