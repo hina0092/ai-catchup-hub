@@ -5,6 +5,14 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
+    '.github/workflows/card-trial.yml',
+    'collector/card_trial.py', 'collector/card_grounding.py', 'collector/daily_cards.py',
+    'collector/daily_config.json', 'tools/card_trial_remote.py', 'tools/daily_remote.py',
+    'tools/render_card_trial.py', 'validation/card-inputs.json',
+    'tests/test_card_trial.py', 'tests/test_card_grounding.py', 'tests/test_card_trial_remote.py',
+    'tests/test_daily_cards.py', 'tests/test_daily_remote.py',
+    'frontend/src/PublicFeed.vue', 'frontend/src/dailyStories.js', 'frontend/src/daily-feed.json',
+    'frontend/tests/daily-feed.test.mjs',
     'frontend/src/prototype/FeedView.vue', 'frontend/src/prototype/trialStories.js',
     'frontend/src/prototype/prototype.css', 'frontend/tests/public-feed.test.mjs',
     'collector/gemini.py', 'collector/gemini_config.json', 'collector/article_source.py',
@@ -45,11 +53,11 @@ def prepare(destination, root=ROOT):
     with ZipFile(destination, 'x', compression=ZIP_DEFLATED) as archive:
         for path, relative in paths:
             archive.write(path, relative)
-        # A source repository starts with no feed contents; CI fetches fresh data.
+        # Legacy RSS output is empty; daily cards are restored from the data branch.
         archive.writestr('frontend/public/data/articles.json', '[]\n')
         archive.writestr('README.md',
             '# AI Catchup Hub\n\n'
-            'An illustrated AI-news feed with five editorial stories and clearly labeled fictional dialogue.\n\n'
+            'An illustrated AI-news feed with source-grounded AI cards and clearly labeled fictional dialogue.\n\n'
             '## Local development\n\n'
             'Python 3.11+, Node.js 24 and pnpm 11.25.0.\n\n'
             '```sh\npython -m unittest discover -s tests -v\n'
@@ -59,10 +67,14 @@ def prepare(destination, root=ROOT):
             'Use a dedicated repository with main as the default branch. '
             'Select GitHub Actions in Settings > Pages. '
             'After approval, set the repository variable ENABLE_PAGES_DEPLOY to true. '
-            'Run Test and publish editorial feed manually. '
-            'The first public edition is fixed at 2026/10/24; collection and AI generation are not connected.\n\n'
+            'The daily workflow runs at 10:17 UTC (19:17 JST); timing can vary. '
+            'Only schedule or explicit manual generate=true invokes AI. Code pushes restore cached cards only. '
+            'The existing card-trial-state branch must be initialized explicitly before first deployment. '
+            'Three attempts per JST day share the manual trial ledger; no paid fallback or retries. '
+            'Free-tier flags and a review within 30 days are required.\n\n'
             'Tests and build must succeed before deployment. '
-            'The workflow uploads frontend/dist only and never commits generated data.\n')
+            'The workflow uploads frontend/dist only. Derived cards and request reservations live on card-trial-state; '
+            'raw article excerpts and grounding quotes are not published.\n')
     return len(paths) + 2
 
 

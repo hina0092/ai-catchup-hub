@@ -8,6 +8,7 @@ const props = defineProps({
   trialMode: Boolean,
   generatedError: Boolean,
   homeUrl: { type: String, default: './' },
+  edition: { type: Object, default: null },
 })
 const { stories, publicMode, generatedMode, trialMode, generatedError, homeUrl } = props
 const countLabel = String(stories.length).padStart(2, '0')
@@ -71,7 +72,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
     <h1>ちょっと気になる。<br>読んだら、わかる。</h1>
     <p>最新AIの話を、<br>図とコメントでひとつずつ。</p>
     <div class="sample-label">{{ publicMode ? '☕ 図と会話で、ひと息キャッチアップ' : '🧪 あなた向けの画面試作' }}</div>
-    <p class="fine">実記事{{ stories.length }}件・{{ generatedMode ? 'Gemini実生成（修正前）' : (publicMode ? '編集済みの見本' : '固定サンプル') }}<br>コメントはすべてAIによる架空の会話<br>確認日：2026/10/24</p>
+    <p class="fine">実記事{{ stories.length }}件・{{ generatedMode ? 'Gemini実生成（修正前）' : (edition?.generated ? 'AIによる説明・図・会話' : publicMode ? '編集済みの見本' : '固定サンプル') }}<br>コメントはすべてAIによる架空の会話<br>{{ edition ? `記事追加：${edition.updated}` : '確認日：2026/10/24' }}</p>
     <p v-if="generatedMode" class="trial-status">初回の実生成結果をそのまま表示。<br>関西弁・事実チェックの修正版ではありません。</p>
     <p v-if="trialMode && !publicMode" class="trial-status">このチャットで生成・編集した見本です。<br>Gemini実生成へ切り替えて見比べられます。</p>
     <nav aria-label="ニュースを選ぶ" class="desktop-nav">
@@ -89,7 +90,8 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
     <p v-if="generatedMode" class="trial-banner generated-banner">🧪 Geminiの初回生成 · 内容は確認中<br><small>2026/10/24の結果を未修正で表示。関西弁・事実チェックの修正版は未生成です。</small></p>
     <p v-if="generatedError" class="trial-banner" role="alert">生成結果を表示できませんでした。見本へ切り替えて確認してください。</p>
     <p v-if="trialMode && !publicMode" class="trial-banner">💡 実記事5件の見本 · このチャットで生成<br><small>このページの内容はGeminiの出力ではありません</small></p>
-    <p v-if="publicMode" class="trial-banner">🌱 まずは5件から、先行公開<br><small>2026/10/24時点の固定記事です。コメントはAIによる架空の会話。ニュースの自動更新は準備中です。</small></p>
+    <p v-if="publicMode && edition" class="trial-banner">🌱 毎日19:17に、次の発見を<br><small>最大3記事を自動更新予定。実行時刻は前後することがあります。<br>{{ edition.message }}<br>更新確認：{{ edition.checked }}<br>{{ edition.generated ? '説明・図・会話はAI生成です。事実は元記事でご確認ください。' : '初回の生成が通るまでは、2026/10/24の見本5件を表示します。' }}</small></p>
+    <p v-else-if="publicMode" class="trial-banner">🌱 まずは5件から、先行公開<br><small>2026/10/24時点の固定記事です。コメントはAIによる架空の会話。ニュースの自動更新は準備中です。</small></p>
     <article v-for="(story, index) in stories" :id="`story-${index}`" :key="story.id" :data-index="index" class="story" :class="story.theme" :aria-labelledby="`title-${story.id}`">
       <div class="story-top"><span class="topic">{{ story.emoji }} {{ story.category }}</span><span class="number">{{ String(index + 1).padStart(2, '0') }} / {{ countLabel }}</span></div>
       <h2 :id="`title-${story.id}`">{{ story.title }}</h2>
@@ -123,7 +125,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
       <p v-else class="end-note">☕ ひとまずここまで。どの会話が気になった？</p>
     </article>
     <footer v-if="!publicMode">ローカル試作 · {{ generatedMode ? '取得済みの実生成結果を表示・継続更新は未接続' : '自動収集・自動生成は未接続' }}<br><a href="./catchup-preview.html">最初の3件の見本へ</a><br><a href="./">通常のフィードへ戻る</a></footer>
-    <footer v-if="publicMode">☕ AI Catchup Hub · 2026/10/24版<br>記事の事実・利用条件はリンク先でご確認ください。<br>コメントは実在する人の投稿ではありません。</footer>
+    <footer v-if="publicMode">☕ AI Catchup Hub{{ edition ? ` · 記事追加：${edition.updated}` : ' · 2026/10/24版' }}<br>記事の事実・利用条件はリンク先でご確認ください。<br>コメントは実在する人の投稿ではありません。</footer>
   </main>
   <nav class="progress" aria-label="ニュースの位置"><button v-for="(story, index) in stories" :key="story.id" :aria-label="`${index + 1}件目：${story.category}`" :aria-current="active === index ? 'step' : undefined" @click="go(index)"><span></span></button></nav>
   <div class="toast" role="status">{{ notice }}</div>

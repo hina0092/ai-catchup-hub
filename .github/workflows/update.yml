@@ -1,7 +1,14 @@
 # Runs only after this app is placed at the root of its own repository.
-name: Test and publish editorial feed
+name: Update AI feed and publish
 on:
   workflow_dispatch:
+    inputs:
+      generate:
+        description: 'Generate up to three new cards within the shared daily budget'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '17 10 * * *' # 19:17 JST; GitHub may delay the start.
   push:
     branches: [main]
   pull_request:
@@ -11,13 +18,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: pages-${{ github.ref }}
+  group: card-generation-trial # shared with manual trials; do not overlap reservations
   cancel-in-progress: false
 
 jobs:
   build:
     permissions:
-      contents: read
+      contents: write # only the existing card-trial-state data/budget branch
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -29,8 +36,28 @@ jobs:
           python-version: '3.12'
       - name: Test collector and release packaging
         run: python -m unittest discover -s tests -v
-      # The first public edition is five fixed, reviewed stories.
-      # No RSS collection, Gemini calls, cache writes, or scheduled generation.
+      - name: Restore published cards and optionally collect and generate
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ENABLE_GEMINI: ${{ vars.ENABLE_GEMINI }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
+          GEMINI_BILLING_DISABLED: ${{ vars.GEMINI_BILLING_DISABLED }}
+          GEMINI_FREE_TIER_REVIEWED_ON: ${{ vars.GEMINI_FREE_TIER_REVIEWED_ON }}
+          RUN_GENERATION: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.generate) }}
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          from pathlib import Path
+          temporary = Path(os.environ['RUNNER_TEMP'])
+          command = [sys.executable, '-m', 'tools.daily_remote',
+                     '--state-dir', str(temporary / 'daily-card-state'),
+                     '--ledger-dir', str(temporary / 'daily-card-ledger')]
+          if os.environ.get('RUN_GENERATION') == 'true':
+              command.append('--live')
+          sys.exit(subprocess.call(command))
+          PY
       - uses: pnpm/action-setup@v4
         with:
           version: '11.25.0'

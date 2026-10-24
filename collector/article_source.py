@@ -28,6 +28,8 @@ class ArticleParser(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.stack = []
         self.parts = []
+        self.preferred_parts = []
+        self.has_preferred = False
         self.blocked = False
 
     def handle_starttag(self, tag, attrs):
@@ -37,22 +39,27 @@ class ArticleParser(HTMLParser):
                 self.blocked = True
         if tag in ('meta', 'link', 'img', 'br', 'hr', 'input', 'source', 'wbr'):
             return
-        parent_active, parent_skip = self.stack[-1][1:] if self.stack else (False, False)
+        parent_active, parent_skip, parent_preferred = self.stack[-1][1:] if self.stack else (False, False, False)
         classes = attrs.get('class', '').lower()
-        active = parent_active or tag == 'article' or 'entry-content' in classes or 'markdown-body' in classes
-        skip = parent_skip or tag in ('script', 'style', 'nav', 'header', 'footer', 'aside', 'form', 'noscript') or bool(re.search(r'\b(advertisement|ads|cookie|navigation)\b', classes))
-        self.stack.append((tag, active, skip))
+        preferred = parent_preferred or bool(set(classes.split()) & {'entry-content', 'markdown-body', 'post__content'})
+        self.has_preferred = self.has_preferred or preferred
+        active = parent_active or tag == 'article' or preferred
+        skip = parent_skip or tag in ('script', 'style', 'nav', 'header', 'footer', 'aside', 'form', 'noscript') or bool(re.search(r'\b(advertisement|ads|cookie|navigation|author-bio|post-card|post-content-cta)\b', classes))
+        self.stack.append((tag, active, skip, preferred))
 
     def handle_endtag(self, tag):
         for i in range(len(self.stack) - 1, -1, -1):
             if self.stack[i][0] == tag:
                 del self.stack[i:]
                 self.parts.append(' ')
+                self.preferred_parts.append(' ')
                 break
 
     def handle_data(self, data):
         if self.stack and self.stack[-1][1] and not self.stack[-1][2]:
             self.parts.append(data)
+            if self.stack[-1][3]:
+                self.preferred_parts.append(data)
 
 
 def article_text(url, hosts, limit=12000, reader=read_url):
@@ -74,6 +81,7 @@ def article_text(url, hosts, limit=12000, reader=read_url):
         parser.feed(reader(url, 2_000_000))
         if parser.blocked:
             return ''
-        return ' '.join(''.join(parser.parts).split())[:limit]
+        preferred = ' '.join(''.join(parser.preferred_parts).split())
+        return (preferred if parser.has_preferred else ' '.join(''.join(parser.parts).split()))[:limit]
     except (OSError, ValueError):
         return ''
