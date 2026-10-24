@@ -5,6 +5,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
+    'README.md',
     '.github/workflows/card-trial.yml',
     'collector/card_trial.py', 'collector/card_grounding.py', 'collector/daily_cards.py',
     'collector/daily_config.json', 'tools/card_trial_remote.py', 'tools/daily_remote.py',
@@ -52,30 +53,15 @@ def prepare(destination, root=ROOT):
         raise FileExistsError(destination)
     with ZipFile(destination, 'x', compression=ZIP_DEFLATED) as archive:
         for path, relative in paths:
-            archive.write(path, relative)
+            if relative == 'README.md':
+                # Keep one README source; local notes stay outside the public archive.
+                readme = path.read_text(encoding='utf-8').split('<!-- LOCAL_DOCS_START -->', 1)[0]
+                archive.writestr(relative, readme.rstrip() + '\n')
+            else:
+                archive.write(path, relative)
         # Legacy RSS output is empty; daily cards are restored from the data branch.
         archive.writestr('frontend/public/data/articles.json', '[]\n')
-        archive.writestr('README.md',
-            '# AI Catchup Hub\n\n'
-            'An illustrated AI-news feed with source-grounded AI cards and clearly labeled fictional dialogue.\n\n'
-            '## Local development\n\n'
-            'Python 3.11+, Node.js 24 and pnpm 11.25.0.\n\n'
-            '```sh\npython -m unittest discover -s tests -v\n'
-            'python collector/collect.py --overwrite\n'
-            'cd frontend\npnpm install --frozen-lockfile --ignore-scripts\npnpm dev\n```\n\n'
-            '## Deployment\n\n'
-            'Use a dedicated repository with main as the default branch. '
-            'Select GitHub Actions in Settings > Pages. '
-            'After approval, set the repository variable ENABLE_PAGES_DEPLOY to true. '
-            'The daily workflow runs at 10:17 UTC (19:17 JST); timing can vary. '
-            'Only schedule or explicit manual generate=true invokes AI. Code pushes restore cached cards only. '
-            'The existing card-trial-state branch must be initialized explicitly before first deployment. '
-            'Three attempts per JST day share the manual trial ledger; no paid fallback or retries. '
-            'Free-tier flags and a review within 30 days are required.\n\n'
-            'Tests and build must succeed before deployment. '
-            'The workflow uploads frontend/dist only. Derived cards and request reservations live on card-trial-state; '
-            'raw article excerpts and grounding quotes are not published.\n')
-    return len(paths) + 2
+    return len(paths) + 1
 
 
 if __name__ == '__main__':

@@ -22,6 +22,11 @@ class ReleaseTests(unittest.TestCase):
                 self.assertEqual(set(archive.namelist()), set(FILES) | {'README.md', 'frontend/public/data/articles.json'})
                 self.assertEqual(archive.read('frontend/public/data/articles.json'), b'[]\n')
                 self.assertFalse(any('Handoff' in name or 'node_modules' in name for name in archive.namelist()))
+                readme = archive.read('README.md').decode('utf-8')
+                self.assertIn('## ローカルで動かす', readme)
+                self.assertIn('## GitHub Pagesでの運用', readme)
+                self.assertNotIn('docs/README.md', readme)
+                self.assertNotIn('LOCAL_DOCS_START', readme)
 
     def test_existing_archive_is_preserved(self):
         with tempfile.TemporaryDirectory() as folder:

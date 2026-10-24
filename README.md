@@ -1,21 +1,171 @@
 # AI Catchup Hub
 
-A personal public-RSS reader built with Python and Vue 3.
+**ちょっと気になる。読んだら、わかる。**
 
-## Local development
+AI・技術ニュースを、日本語の説明・図・短い会話で気軽に追うための個人開発アプリです。スマホでスクロールしながら新しい技術に触れ、気になった話題は元記事で深掘りできます。
 
-Python 3.11+, Node.js 24 and pnpm 11.25.0.
+**[公開サイトを開く](https://hina0092.github.io/ai-catchup-hub/)**
+
+現在は先行公開版です。自動生成された記事がない場合は、2026/10/24に用意した見本5件を表示します。更新状況はサイト上の「記事追加」「更新確認」で確認できます。
+
+## どんなことができる？
+
+- **日本語で概要をつかむ**：「何が変わった？」「例えば、こんなこと」「知っておきたいこと」で記事を読み解きます。
+- **図で仕組みを見る**：入力・手順・結果をHTML/CSSの模式図で表示します。
+- **会話から疑問を見つける**：1記事につき8件の架空コメントを、返信付きの読み物として表示します。
+- **気になったら元記事へ進む**：情報源・公開日・元記事へのリンクを確認できます。
+- **スマホでもPCでも読む**：縦スクロールのフィードと、記事間を移動するナビゲーションを備えています。
+
+コメントはすべてAIによる架空の会話で、実在する人の投稿や利用者の声ではありません。説明・図もAI生成を含むため、事実や利用条件は元記事で確認してください。
+
+「もっとこれ」は、その画面で好きなテーマに目印を付ける機能です。現在は再読み込み後の保存や、おすすめ順への反映はありません。
+
+## ニュースが届く仕組み
+
+```text
+公開RSSから新着記事を選ぶ
+  → 記事本文の一部を取得する
+  → Geminiで日本語の説明・図の材料・架空の会話を生成する
+  → 形式・根拠などを検査する
+  → 合格したカードを保存する
+  → Vueで静的サイトをビルドし、GitHub Pagesへ公開する
+```
+
+現在の自動生成対象は、Zenn AI・Zenn LLM・GitHub Blog AI & ML・AWS AIです。14日以内の記事から重複や掲載済みURLなどを除き、異なる発行元を優先して選びます。設定は `collector/daily_config.json` にまとめています。
+
+| 項目 | 現在の設定・動作 |
+| --- | --- |
+| 定期実行 | 毎日19:17（日本時間）。GitHub Actionsの状況で前後します |
+| 生成上限 | 日本時間の1日あたり最大3回送信。合格した記事のみ追加します |
+| 掲載件数 | 自動生成したカードを最大30件保持します |
+| 本文取得・生成の失敗 | 既存の記事を残し、画面に更新状況を表示します |
+| APIの利用上限到達 | その日の生成を停止し、自動再試行や有料モデルへの切り替えは行いません |
+| 保存データの読み込み失敗 | 配置を停止し、公開中のサイトを維持します |
+
+自動生成と手動検証は送信台帳を共用します。手動検証の利用分によって、自動生成できる件数が減る場合があります。3回の送信で3記事の追加を保証するものではありません。
+
+## 使用技術
+
+| 役割 | 技術 |
+| --- | --- |
+| 画面 | Vue 3、Vite、HTML/CSS |
+| 収集・本文抽出・検査 | Python 3.11以上の標準ライブラリ |
+| 説明・図の材料・会話の生成 | Gemini API |
+| 自動実行・テスト | GitHub Actions |
+| サイト公開 | GitHub Pages |
+| 生成カード・送信台帳の保存 | 専用の `card-trial-state` ブランチ |
+
+## ローカルで動かす
+
+### 必要な環境
+
+- Node.js 24
+- pnpm 11.25.0
+- Python 3.11以上（収集処理・Pythonテストを実行する場合。CIでは3.12を使用）
+
+### 画面を起動する
+
+リポジトリを取得し、そのルートから実行します。
 
 ```sh
-python -m unittest discover -s tests -v
-python collector/collect.py --overwrite
 cd frontend
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm dev
 ```
 
-## Deployment
+ターミナルに表示されるローカルURLをブラウザーで開きます。画面の起動だけなら、APIキーやAIへの送信は必要ありません。保存済みのデータ、または見本の記事を表示します。
 
-Use a dedicated repository with main as the default branch. Select GitHub Actions in Settings > Pages. After approval, set the repository variable ENABLE_PAGES_DEPLOY to true. Run Test, collect and publish manually. Daily collection is scheduled for 10:17 UTC (19:17 JST); timing is not guaranteed.
+### テストと本番ビルド
 
-Tests, collection and build must succeed before deployment. Total collection failure leaves the deployed site unchanged. Partial source failure publishes the successfully collected sources only. The workflow uploads frontend/dist only and never commits generated data.
+Pythonテストはリポジトリのルートから実行します。追加のPythonパッケージは不要です。
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+画面のテストとビルドは `frontend/` で実行します。
+
+```sh
+cd frontend
+pnpm test
+pnpm build
+pnpm preview
+```
+
+ビルド成果物は `frontend/dist/` に出力されます。これらのテスト・ビルドでは、実際のAI生成を行いません。
+
+### AIを呼ばずにカード入力を検証する
+
+リポジトリのルートから実行します。
+
+```sh
+python -m collector.card_trial --output .cache/card-trial/check.json
+python -m tools.render_card_trial --input .cache/card-trial/check.json --output .cache/card-trial/check.html
+```
+
+既定では入力確認だけを行い、Gemini APIへ送信しません。出力先に既存ファイルがある場合は上書きせず停止するため、再実行時は別のファイル名を指定してください。
+
+## GitHub Pagesでの運用
+
+### 公開の準備
+
+アプリを専用リポジトリのルートに置き、既定のブランチを `main` にします。GitHubの「Settings > Pages」で「GitHub Actions」を選択します。
+
+公開ワークフローは、既存の `card-trial-state` ブランチから生成カードと送信台帳を読み込みます。新しい環境では、公開前にこのブランチの初期化が必要です。ブランチがない場合や、以前の処理が中断した状態の場合は、自動で初期化・リセットしません。
+
+手動検証用の `card-trial.yml` には初期化オプションがありますが、現在はこのプロジェクト専用のリポジトリ条件を持ち、実生成と組み合わせて使う設定です。別のリポジトリへ移す場合は条件を見直し、初期化時にもAPI送信が発生する点を確認してください。
+
+### 生成・公開の設定
+
+GitHubの「Settings > Secrets and variables > Actions」で設定します。
+
+| 種別 | 名前 | 用途 |
+| --- | --- | --- |
+| Secret | `GEMINI_API_KEY` | Gemini APIのキー |
+| Variable | `ENABLE_PAGES_DEPLOY` | `true` でGitHub Pagesへの配置を有効にする |
+| Variable | `ENABLE_GEMINI` | `true` でAI生成の実行を許可する |
+| Variable | `GEMINI_MODEL` | 現在のカード生成で使用する `gemini-3.5-flash-lite` |
+| Variable | `GEMINI_BILLING_DISABLED` | 課金を無効にしていることを確認したうえで `true` にする |
+| Variable | `GEMINI_FREE_TIER_REVIEWED_ON` | 無料枠を確認した日付（`YYYY-MM-DD`） |
+
+無料枠の条件や実際の利用上限は、利用するプロジェクトで確認してください。上記の変数は実行条件を確認するためのもので、Google側の課金設定を変更しません。確認日から30日を超えると新規生成を停止します。
+
+APIキーはGitHub Secretsに保存し、リポジトリやフロントエンドには書き込みません。
+
+### いつAI生成が動く？
+
+ワークフロー名は **Update AI feed and publish** です。
+
+| きっかけ | 動作 |
+| --- | --- |
+| 毎日の定期実行 | 設定条件と送信上限の範囲で、収集・生成・公開を行います |
+| 手動実行で `generate=true` | 同じ条件・上限で収集・生成を行います |
+| 手動実行で `generate=false`（既定） | 保存済みのカードを復元してビルド・公開します |
+| `main` へのpush | 保存済みのカードを復元してビルド・公開します。新規生成は行いません |
+| `main` 向けのプルリクエスト | テスト・ビルドを行います。生成・公開は行いません |
+
+配置には `ENABLE_PAGES_DEPLOY=true` とテスト・ビルドの成功が必要です。サイトには `frontend/dist/` のみをアップロードします。生成したカードと送信予約はデータ用ブランチに保存し、取得した本文の抜粋や検証用の根拠引用は公開データへ含めません。
+
+## ディレクトリ構成
+
+```text
+.github/workflows/   自動更新・公開と手動検証
+collector/           RSS収集、本文抽出、AI生成、出力検査
+frontend/            Vueの画面、表示データ、画面のテスト
+  src/PublicFeed.vue 現在の公開画面の入口
+  src/prototype/     公開画面で共用する表示部品と見本
+  src/daily-feed.json ビルド時に読み込む生成カード
+  src/App.vue        以前のRSSフィード画面
+  tests/             表示・データ処理のテスト
+tests/               Pythonのテストと入力例
+tools/               データ同期、検証用HTML、公開用ZIPの作成
+validation/          手動検証用の記事入力
+```
+
+## 現在の制限
+
+- AI出力の形式や根拠の抜粋を検査しますが、意味内容の正しさを完全には保証しません。
+- 本文を取得できない記事は、タイトルだけで内容を推測せずスキップします。
+- 図は模式図です。元記事に掲載された画像や、画像生成APIによる画像ではありません。
+- コメント欄は読むための架空の会話です。ユーザー投稿・返信機能はありません。
+- 以前のRSS画面にあるカテゴリ切り替え・保存・Hacker Newsの議論分析は、現在の公開画面には接続していません。
