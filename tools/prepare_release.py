@@ -5,6 +5,8 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
+    'frontend/src/prototype/FeedView.vue', 'frontend/src/prototype/trialStories.js',
+    'frontend/src/prototype/prototype.css', 'frontend/tests/public-feed.test.mjs',
     'collector/gemini.py', 'collector/gemini_config.json', 'collector/article_source.py',
     'tools/ai_cache.py', 'tests/test_gemini.py', 'tests/test_ai_cache.py',
     'frontend/src/enrichment.js', 'frontend/tests/enrichment.test.mjs',
@@ -47,7 +49,7 @@ def prepare(destination, root=ROOT):
         archive.writestr('frontend/public/data/articles.json', '[]\n')
         archive.writestr('README.md',
             '# AI Catchup Hub\n\n'
-            'A personal public-RSS reader built with Python and Vue 3.\n\n'
+            'An illustrated AI-news feed with five editorial stories and clearly labeled fictional dialogue.\n\n'
             '## Local development\n\n'
             'Python 3.11+, Node.js 24 and pnpm 11.25.0.\n\n'
             '```sh\npython -m unittest discover -s tests -v\n'
@@ -57,11 +59,9 @@ def prepare(destination, root=ROOT):
             'Use a dedicated repository with main as the default branch. '
             'Select GitHub Actions in Settings > Pages. '
             'After approval, set the repository variable ENABLE_PAGES_DEPLOY to true. '
-            'Run Test, collect and publish manually. '
-            'Daily collection is scheduled for 10:17 UTC (19:17 JST); timing is not guaranteed.\n\n'
-            'Tests, collection and build must succeed before deployment. '
-            'Total collection failure leaves the deployed site unchanged. '
-            'Partial source failure publishes the successfully collected sources only. '
+            'Run Test and publish editorial feed manually. '
+            'The first public edition is fixed at 2026/10/24; collection and AI generation are not connected.\n\n'
+            'Tests and build must succeed before deployment. '
             'The workflow uploads frontend/dist only and never commits generated data.\n')
     return len(paths) + 2
 

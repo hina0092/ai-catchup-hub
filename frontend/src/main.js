@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
-import App from './App.vue'
-import './style.css'
-createApp(App).mount('#app')
+import FeedView from './prototype/FeedView.vue'
+import { trialStories } from './prototype/trialStories.js'
+import './prototype/prototype.css'
+createApp(FeedView, { stories: trialStories, publicMode: true }).mount('#app')
