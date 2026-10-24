@@ -21,6 +21,11 @@
       "id": "copilot",
       "fingerprint": "954f5f2a865cf94db379d3c631ab79b215a11961ea68688899742dbfee0fc411",
       "version": 1
+    },
+    "2026-10-24-react-7aac704d6087.json": {
+      "id": "react",
+      "fingerprint": "7aac704d608733ca0153f107755c5f0fc5f2983017ff7ee6b9637b13b9e49270",
+      "version": 1
     }
   }
 }
