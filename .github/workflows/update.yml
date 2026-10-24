@@ -1,18 +1,7 @@
 # Runs only after this app is placed at the root of its own repository.
-name: Test, collect and publish
+name: Test and publish editorial feed
 on:
   workflow_dispatch:
-    inputs:
-      test_one_article:
-        description: 'Approved one-time free-tier API test: at most one article; does not enable scheduled generation'
-        type: boolean
-        default: false
-      initialize_gemini_cache:
-        description: 'Create ai-cache branch only on first approved setup (never reset existing cache)'
-        type: boolean
-        default: false
-  schedule:
-    - cron: '17 10 * * *' # 19:17 JST; actual start can be delayed.
   push:
     branches: [main]
   pull_request:
@@ -28,7 +17,7 @@ concurrency:
 jobs:
   build:
     permissions:
-      contents: write # ai-cache only; application checkout never retains credentials
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -40,46 +29,8 @@ jobs:
           python-version: '3.12'
       - name: Test collector and release packaging
         run: python -m unittest discover -s tests -v
-      - name: Collect fresh public feeds
-        run: python collector/collect.py --overwrite
-      - name: Load durable Gemini cache
-        id: gemini_cache
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-          INITIALIZE_GEMINI_CACHE: ${{ github.event_name == 'workflow_dispatch' && inputs.initialize_gemini_cache }}
-        run: python tools/ai_cache.py "${{ runner.temp }}/hub-ai-cache"
-      - name: Apply cached summaries and optionally generate with free Gemini
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.gemini_cache.outcome == 'success'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ENABLE_GEMINI: ${{ vars.ENABLE_GEMINI }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
-          GEMINI_BILLING_DISABLED: ${{ vars.GEMINI_BILLING_DISABLED }}
-          GEMINI_FREE_TIER_REVIEWED_ON: ${{ vars.GEMINI_FREE_TIER_REVIEWED_ON }}
-          GEMINI_ONE_ARTICLE_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.test_one_article }}
-        run: |
-          python - <<'PY'
-          import json, os, subprocess, sys
-          from pathlib import Path
-          config = json.loads(Path('collector/gemini_config.json').read_text())
-          if os.environ.get('GEMINI_ONE_ARTICLE_TEST') == 'true':
-              config.update(enabled=True, max_articles=1)
-              os.environ['ENABLE_GEMINI'] = 'true'
-          path = Path(os.environ['RUNNER_TEMP']) / 'gemini-run-config.json'
-          path.write_text(json.dumps(config))
-          sys.exit(subprocess.call([sys.executable, '-m', 'collector.gemini', '--config', str(path),
-                                    '--cache-dir', str(path.parent / 'hub-ai-cache')]))
-          PY
-      - name: Collect optional Hacker News discussion metadata
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.ENABLE_HN_DISCUSSIONS == 'true'
-        continue-on-error: true
-        run: python collector/discussions.py --output frontend/public/data/articles.json --overwrite --allow-api
-      - name: Remove excerpts from final deployment data
-        run: python tools/public_feed.py frontend/public/data/articles.json
+      # The first public edition is five fixed, reviewed stories.
+      # No RSS collection, Gemini calls, cache writes, or scheduled generation.
       - uses: pnpm/action-setup@v4
         with:
           version: '11.25.0'
