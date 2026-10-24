@@ -1,0 +1,37 @@
+{
+  "format": 1,
+  "basis": "reviewed_brief",
+  "reviewed_on": "2026-10-24",
+  "articles": [
+    {
+      "id": "polly", "source": "AWS", "published_on": "2026-10-22",
+      "url": "https://aws.amazon.com/blogs/machine-learning/amazon-polly-delivers-a-major-upgrade-to-its-generative-engine/",
+      "title": "Amazon Polly delivers a major upgrade to its Generative engine",
+      "source_text": "AWSはAmazon PollyのGenerative engine更新を発表した。より自然で表現豊か、数字などの読み方も正確な音声出力を目指す。既存の生成音声の名前とAPIは変えずに更新される。14の新しい声を追加し、HindiとFinnishの生成音声も一般提供する。Pollyは文章を音声に変換するサービスで、動画、学習教材、電話案内などを用途として挙げている。従量課金であり、今回の更新による価格の上昇はないと説明している。日本語の品質改善の程度や、誰でも無料で使える条件はこの入力では確認できない。"
+    },
+    {
+      "id": "folders", "source": "Zenn · shinsei99", "published_on": "2026-10-18",
+      "url": "https://zenn.dev/shinsei99/articles/a-list-is-not-a-map",
+      "title": "選択肢の一覧は判断材料ではない — フォルダ2,422件に説明を付けたら、AIの聞き返しが消えた",
+      "source_text": "著者は不動産管理の共有フォルダへ書類を振り分けるAIの仕組みを作っている。実在する振り分け先の名前だけを候補一覧として渡しても、そこに何を入れるかの判断材料がなかった。そこでフォルダごとの内容の説明と、似たフォルダとの違いを含む選択基準を用意した。説明は中のファイル名やサブフォルダ名から分かる事実を使い、想像で補わず、不明なら不明と残す。浅い階層だけでは不足し、深い階層にも説明を広げた。規則的な名前から決められる部分は生成AIではなくプログラムの定型処理で説明した。これは著者の個別の実践記であり、他の業務でも同じ結果になると実証した記事ではない。"
+    },
+    {
+      "id": "diffusion", "source": "Google Research", "published_on": "2026-09-29",
+      "url": "https://research.google/blog/how-diffusion-controller-unifies-and-simplifies-ai-image-generation/",
+      "title": "How Diffusion Controller unifies and simplifies AI image generation",
+      "source_text": "Google ResearchはDiffusion Controllerという画像生成を制御する研究を紹介した。既存の画像生成モデルに軽量な制御ネットワークを組み合わせ、生成途中の進み方を調整し、指示への一致と画質の両立を狙う。説明例はサングラスをかけたトカゲ。サングラスが欠ける場合や、強く指示して顔が歪む場合のバランスを課題に挙げる。研究ではStable Diffusion v1.4を土台に評価している。特定の一般向け画像サービスへの搭載日や、無料で利用できる新サービスの開始は、この入力には含まれない。"
+    },
+    {
+      "id": "copilot", "source": "GitHub Blog", "published_on": "2026-10-19",
+      "url": "https://github.blog/ai-and-ml/github-copilot/how-to-continue-a-github-copilot-app-session-in-vs-code/",
+      "title": "How to continue a GitHub Copilot app session in VS Code",
+      "source_text": "GitHubの公式ガイドは、Copilotアプリの作業セッションをVS Codeへ引き継ぐ方法を説明する。会話、作業の文脈、コードの変更を保ったままエディターで作業を続ける。アプリからOpen in VS Codeを選ぶと、セッションに対応する作業ツリーと会話を開く流れ。事前にアプリとVS Codeが必要で、同じGitHubアカウントへの接続やリポジトリを扱う権限も求める。引き継ぎ後は差分を読み、必要な手編集を行い、テストや表示を確認する手順を示す。これはガイドの公開日であり機能の初公開日とは限らない。無料で利用できる条件はこの入力では未確認。"
+    },
+    {
+      "id": "react", "source": "Zenn · ZHAOJIAYI", "published_on": "2026-10-18",
+      "url": "https://zenn.dev/zhaojiayi/articles/a43ab384fa104f",
+      "title": "LLM エージェント（ReAct）を TypeScript で手書きしてみた",
+      "source_text": "著者がTypeScriptで小さなReAct型エージェントを作り、動作を理解した学習記録。モデルは操作名や操作の入力を文字列で返し、外側のプログラムが読み取って道具を実行する。実行結果を次の入力に含め、必要なら繰り返し、最終回答が得られたら終了する。計算機、現在時刻、文字数カウントの道具を例にする。会話の履歴はプログラム側で保持し、モデルへの入力に含める。ループには回数上限を置いている。著者の最小の学習用実装であり、すべての実用エージェントが同じ規模で済むことを示してはいない。記事の外部モデルの現在の無料条件はこの入力では確認できない。"
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+# Intended for the dedicated ai-catchup-hub repository root, not the whole Vault.
+name: Card generation trial (no deployment)
+on:
+  workflow_dispatch:
+    inputs:
+      live:
+        description: 'Approved Gemini free-tier test: at most five requests; no site deployment'
+        type: boolean
+        default: false
+      initialize_state:
+        description: 'First approved setup only: create card-trial-state if absent; never reset an existing state'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: card-generation-trial
+  cancel-in-progress: false
+
+jobs:
+  trial:
+    if: github.repository == 'hina0092/ai-catchup-hub' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # dedicated budget branch only; no Pages/id-token permission
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Test isolated generation and persistent reservations (no AI calls)
+        run: python -m unittest tests.test_card_trial tests.test_card_trial_remote -v
+      - name: Check five inputs without calling Gemini
+        if: ${{ !inputs.live }}
+        run: python -m collector.card_trial --output trial-output/result.json
+      - name: Generate at most five cards with durable request reservations
+        if: ${{ inputs.live }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ENABLE_GEMINI: ${{ vars.ENABLE_GEMINI }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
+          GEMINI_BILLING_DISABLED: ${{ vars.GEMINI_BILLING_DISABLED }}
+          GEMINI_FREE_TIER_REVIEWED_ON: ${{ vars.GEMINI_FREE_TIER_REVIEWED_ON }}
+          INITIALIZE_TRIAL_STATE: ${{ inputs.initialize_state }}
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          from pathlib import Path
+          temporary = Path(os.environ['RUNNER_TEMP'])
+          command = [sys.executable, '-m', 'tools.card_trial_remote',
+                     '--input', 'validation/card-inputs.json',
+                     '--output', 'trial-output/result.json',
+                     '--state-dir', str(temporary / 'card-trial-state'),
+                     '--ledger-dir', str(temporary / 'card-trial-ledger')]
+          if os.environ.get('INITIALIZE_TRIAL_STATE') == 'true':
+              command.append('--initialize-state')
+          sys.exit(subprocess.call(command))
+          PY
+      - name: Render review page if a result exists
+        if: ${{ !cancelled() && hashFiles('trial-output/result.json') != '' }}
+        run: python -m tools.render_card_trial --input trial-output/result.json --output trial-output/review.html
+      - name: Keep result files for review (not GitHub Pages)
+        if: ${{ !cancelled() && hashFiles('trial-output/result.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: card-trial-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            trial-output/result.json
+            trial-output/review.html
+          if-no-files-found: error
+          retention-days: 7
