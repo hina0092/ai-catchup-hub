@@ -13,5 +13,10 @@ export function useSavedArticles() {
     apply(repository.toggle(article,kind))
     notice.value=warning.value?'保存状態を確認してください。':had?'保存区分を解除しました。':'このブラウザーに保存しました。'
   }
-  return {items,warning,notice,labels,toggle}
+  function bookmark(article) {
+    const had=labels(article).length>0
+    apply(repository.bookmark(article))
+    notice.value=warning.value?'保存状態を確認してください。':had?'保存を解除しました。':'このブラウザーに保存しました。'
+  }
+  return {items,warning,notice,labels,toggle,bookmark}
 }

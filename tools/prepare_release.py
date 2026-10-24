@@ -5,6 +5,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
+    'frontend/src/readerSnapshots.js', 'frontend/tests/reader-saved.test.mjs',
     'README.md',
     '.github/workflows/card-trial.yml',
     'collector/card_trial.py', 'collector/card_grounding.py', 'collector/daily_cards.py',
