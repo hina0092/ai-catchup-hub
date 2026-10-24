@@ -11,6 +11,11 @@
       "id": "folders",
       "fingerprint": "afd1382887ba3f6f12e03997b4d49f4b8e55b54ec0f557b18189a4c9cfb3042a",
       "version": 1
+    },
+    "2026-10-24-diffusion-145604b27bbf.json": {
+      "id": "diffusion",
+      "fingerprint": "145604b27bbf9a6937c2784ae8b4413681fd8d709d0db364946427b7c20c2a08",
+      "version": 1
     }
   }
 }
