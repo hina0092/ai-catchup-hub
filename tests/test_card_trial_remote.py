@@ -43,7 +43,7 @@ class RemoteTrialTests(TestCase):
             saved = json.loads(git(self.remote, 'show', f'{BRANCH}:state.json').stdout)
             self.assertTrue(saved['active'])
             self.assertGreaterEqual(len(saved['files']), 1)
-            return result()
+            return result(args[2])
 
         first = run_trial(self.data, self.root / 'first.json', live=True, env=ENV, now=NOW,
                           ledger_dir=ledger, provider=provider, sleep=Mock(), persist=store.persist)

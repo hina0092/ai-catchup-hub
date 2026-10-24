@@ -16,13 +16,19 @@ ENV = dict(ENABLE_GEMINI='true', GEMINI_BILLING_DISABLED='true',
            GEMINI_FREE_TIER_REVIEWED_ON='2026-10-23', GEMINI_API_KEY='SECRET_TEST_ONLY', GEMINI_MODEL=MODEL)
 
 
-def result():
-    return dict(sufficient=True, title='入力からニュースを理解する', lead='短い説明です。',
+def result(article=None):
+    card = dict(sufficient=True, title='入力からニュースを理解する', lead='短い説明です。',
                 changed='何が変わったかを説明します。', example='例えば身近な作業への提案です。',
                 caution='実際の効果は未確認です。', diagram=dict(layout='steps', question='何が起きる？',
                 nodes=['入力を渡す', '結果を確認'], result='仕組みが分かる'),
                 comments=[dict(name=f'人物{i}', text=f'論点{i}について確認したい。', reply_to=None if i % 2 == 0 else i - 1)
                           for i in range(8)])
+    if article is not None:
+        quote = article['source_text'][:40]
+        card.update(article_kind=article['article_kind'], comment_kinds=['question'] * 8,
+                    grounding=[dict(field=field, quote=quote) for field in
+                               ['title', 'lead', 'changed', 'example', 'caution', 'diagram']])
+    return card
 
 
 class CardTrialTests(TestCase):
@@ -34,7 +40,7 @@ class CardTrialTests(TestCase):
 
     def run_trial(self, **options):
         args = dict(live=True, env=ENV, now=NOW, ledger_dir=self.root / 'ledger', sleep=Mock(),
-                    provider=Mock(side_effect=lambda *args: result()))
+                    provider=Mock(side_effect=lambda *args: result(args[2])))
         args.update(options)
         return run_trial(self.data, self.root / 'report.json', **args)
 
@@ -58,7 +64,7 @@ class CardTrialTests(TestCase):
     def test_requests_reserved_before_sending_and_five_per_day(self):
         def provider(*args):
             self.assertTrue(list((self.root / 'ledger').glob('2026-10-24-*.json')))
-            return result()
+            return result(args[2])
         report = self.run_trial(provider=provider)
         self.assertEqual([r['status'] for r in report['results']], ['accepted'] * 5)
         changed = deepcopy(self.data)

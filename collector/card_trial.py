@@ -18,9 +18,10 @@ from urllib.request import Request, build_opener
 
 from collector.article_source import NoRedirect
 from collector.gemini import live_allowed
+from collector.card_grounding import KINDS, META, GROUNDING_SCHEMA, validate_grounding
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = 1
+VERSION = 2
 MODEL = 'gemini-3.5-flash-lite'
 JST = timezone(timedelta(hours=9))
 JP = re.compile(r'[\u3040-\u30ff\u3400-\u9fff]')
@@ -68,6 +69,11 @@ def validate_inputs(data):
         urls.add(url)
         text(row.get('source'), 100, False)
         text(row.get('title'), 500, False)
+        if row.get('article_kind') not in KINDS:
+            raise Rejected('article_kind')
+        terms = row.get('unsupported_terms', [])
+        if not isinstance(terms, list) or any(not isinstance(t, str) or not 1 <= len(t) <= 50 for t in terms):
+            raise Rejected('input_schema')
         brief = text(row.get('source_text'), 12000)
         if len(brief) < 100:
             raise Rejected('input_insufficient')
@@ -78,13 +84,17 @@ def validate_inputs(data):
     return rows
 
 
-def validate_result(value):
+def validate_result(value, article=None):
     if not isinstance(value, dict) or type(value.get('sufficient')) is not bool:
         raise Rejected('result_schema')
     if value['sufficient'] is False:
         raise Rejected('insufficient_evidence')
-    if set(value) != {'sufficient', *TEXT_LIMITS, 'diagram', 'comments'}:
+    base_fields = {'sufficient', *TEXT_LIMITS, 'diagram', 'comments'}
+    has_grounding = bool(set(value) & META)
+    if set(value) != (base_fields | META if has_grounding else base_fields):
         raise Rejected('result_schema')
+    if article is not None and not has_grounding:
+        raise Rejected('grounding_missing')
     result = {key: text(value.get(key), limit) for key, limit in TEXT_LIMITS.items()}
     diagram = value.get('diagram')
     if diagram is not None:
@@ -112,7 +122,10 @@ def validate_result(value):
             raise Rejected('comment_duplicate')
         seen.add(body)
         clean.append(dict(name=text(comment['name'], 18, False), text=body, reply_to=parent))
-    return {**result, 'diagram': diagram, 'comments': clean}
+    if has_grounding:
+        validate_grounding(value, article, Rejected)
+    return {**result, 'diagram': diagram, 'comments': clean,
+            **({k: value[k] for k in META} if has_grounding else {})}
 
 
 def string_schema(maximum):
@@ -123,6 +136,7 @@ SCHEMA = {
     'type': 'object',
     'properties': {
         'sufficient': {'type': 'boolean'},
+        **GROUNDING_SCHEMA,
         **{k: string_schema(n) for k, n in TEXT_LIMITS.items()},
         'diagram': {'type': ['object', 'null'], 'properties': {
             'layout': {'type': 'string', 'enum': ['steps', 'combine']},
@@ -136,7 +150,7 @@ SCHEMA = {
                 'reply_to': {'type': ['integer', 'null'], 'description': '返信先の0始まりの番号。必ず先行コメントを参照。新スレッドならnull。'}},
             'required': ['name', 'text', 'reply_to'], 'additionalProperties': False}},
     },
-    'required': ['sufficient', *TEXT_LIMITS, 'diagram', 'comments'],
+    'required': ['sufficient', *TEXT_LIMITS, 'diagram', 'comments', *sorted(META)],
     'additionalProperties': False,
 }
 
@@ -152,20 +166,33 @@ cautionは入力にある条件や未確認事項を簡潔に説明。水増し�
 diagramは仕組みが伝わる場合だけ。直列はsteps、材料の組合せはcombine。
 図不要ならnull。質問、2〜4個の短いラベル、結論だけを返す。
 commentsはAIによる架空の会話8件。ユーザーは読む専用。
+口調は匿名掲示板のような、関西弁まじりの短い掛け合い。前提知識のない人の「何が違うん？」から入る。
+例えば「ファイル開くだけちゃうん？」「会話も引き継ぐんや」「それは助かりそうやな」のように、疑問・返答・感想を混ぜる。
+例文の内容は入力に根拠がある場合だけ使い、コピペしない。全員を強い関西弁にする必要はない。
+名前は「ねこ背」「窓多すぎ」などの匿名名。編集部A・初心者B・先輩Cなど教材の役割名にしない。
 毎回別の人物が集まり、素朴な疑問と比較・背景を中心に短くやり取りする。
 全員が説明役にならない。軽いツッコミ、皮肉、反論はよいが、毎回無理に対立させない。
 実在の投稿・世論・利用実績に見せず「使ったらできた」など架空の体験を作らない。
 根拠がない数字を作らない。初心者の誤解は同じ会話で根拠に沿って訂正する。
 返信先は先行コメント番号をreply_toへ。新しい話題ならnull。
 各コメントは100文字以内、ほぼ1〜2行。HTML・コード・長い逐語引用は不要。
+article_kindは入力の値をそのまま返す。guideは既存機能の手順紹介で、新発表と呼ばない。
+practiceは個人の実践、researchは研究、announcementだけが新発表。端末対応・料金を推測しない。
+unsupported_termsに指定された語は、疑問や例でも使わない。確認できていない具体性を増やさない。
+comment_kindsに各コメントの種類を記入。fact=事実説明、question=疑問、opinion=感想・期待。
+事実の文を疑問や感想と偽って分類しない。
+groundingは根拠の抜粋。title/lead/changed/example/cautionに各1個以上、図があればdiagram、
+factのコメントにはcomments.0〜comments.7にも付ける。quoteは入力から正確に抜き出す。
+提案のexampleも着想の根拠を付け、提案であることを本文に明記する。
+入力を引用できても内容が正しいとは限らないので、抜粋が本当に断言を支えるか見直す。
 JSONだけを返す。形式検証を通すために情報を創作しない。'''
 
 
-def request_card(model, key, article):
+def request_card(model, key, article, *, prompt=PROMPT):
     if model != MODEL:
         raise Rejected('model_not_allowed')
     payload = {
-        'systemInstruction': {'parts': [{'text': PROMPT}]},
+        'systemInstruction': {'parts': [{'text': prompt}]},
         'contents': [{'role': 'user', 'parts': [{'text': json.dumps(article, ensure_ascii=False)}]}],
         'generationConfig': {'maxOutputTokens': 6144, 'responseMimeType': 'application/json',
                              'responseJsonSchema': SCHEMA},
@@ -254,7 +281,7 @@ def run_trial(data, output, *, live=False, env=None, now=None, ledger_dir=None,
                 persist(ledger)
             try:
                 value = provider(model, env['GEMINI_API_KEY'], row)
-                entry['card'] = validate_result(value)
+                entry['card'] = validate_result(value, article=row)
                 entry['status'] = 'accepted'
             except Rejected as error:
                 # Only controlled codes, never exception response text.
@@ -286,6 +313,8 @@ REASONS = {'invalid_text', 'invalid_language', 'result_schema', 'insufficient_ev
            'diagram_schema', 'diagram_layout', 'diagram_count', 'comment_count',
            'comment_schema', 'comment_parent', 'comment_duplicate', 'response_too_large',
            'response_schema', 'incomplete_response'}
+REASONS.update({'article_kind', 'comment_kind', 'grounding_schema', 'grounding_quote',
+                'grounding_missing', 'unsupported_announcement', 'unsupported_detail'})
 
 
 def main():

@@ -34,7 +34,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Test isolated generation and persistent reservations (no AI calls)
-        run: python -m unittest tests.test_card_trial tests.test_card_trial_remote -v
+        run: python -m unittest tests.test_card_trial tests.test_card_trial_remote tests.test_card_grounding -v
       - name: Check five inputs without calling Gemini
         if: ${{ !inputs.live }}
         run: python -m collector.card_trial --output trial-output/result.json
