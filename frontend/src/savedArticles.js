@@ -1,4 +1,5 @@
 import { enrichment } from './enrichment.js'
+import { readerSnapshot } from './readerSnapshots.js'
 export const STORAGE_KEY = 'ai-catchup-hub.saved.v1'
 export const saveKinds = [['read','あとで読む'],['try','試したい'],['work','仕事に使えそう']]
 const kinds = new Set(saveKinds.map(([id])=>id))
@@ -11,6 +12,10 @@ export function snapshot(article) {
   const url=safeUrl(article?.url)
   if(!url || typeof article.title!=='string' || !article.title.trim()) throw new Error('invalid article')
   const result={url,title:article.title.slice(0,500),source:typeof article.source==='string'?article.source.slice(0,160):'情報源不明'}
+  if(article.reader_story !== undefined) {
+    result.reader_story=readerSnapshot(article.reader_story)
+    if(result.reader_story.url!==url) throw new Error('snapshot URL mismatch')
+  }
   for(const key of ['id','category','published_at','collected_at','summary']) if(typeof article[key]==='string') result[key]=article[key].slice(0,500)
   const ai=enrichment(article)
   if(ai) Object.assign(result,ai)
@@ -40,6 +45,21 @@ export function createSavedRepository(getStorage, now=()=>new Date().toISOString
     catch {persistent=false;warning='保存領域を読み込めません。この画面内だけで保存します。既存の保存データは上書きしません。'}
     return state()
   }
+  function persist() {
+    if(persistent) {
+      try {getStorage().setItem(STORAGE_KEY,JSON.stringify({version:1,items}));warning=''}
+      catch {persistent=false;warning='端末に保存できません。この画面内では保持しますが、再読み込みすると今回の変更が失われます。'}
+    }
+    return state()
+  }
+  function bookmark(article) {
+    const clean=snapshot(article)
+    const found=items.some(item=>item.url===clean.url)
+    if(!found && items.length>=MAX_ITEMS) {warning='保存は500件までです。不要な保存を解除してください。';return state()}
+    items=items.filter(item=>item.url!==clean.url)
+    if(!found) items.unshift({url:clean.url,article:clean,labels:['read'],saved_at:now()})
+    return persist()
+  }
   function toggle(article,kind) {
     if(!kinds.has(kind)) throw new Error('invalid save kind')
     const clean=snapshot(article)
@@ -48,11 +68,7 @@ export function createSavedRepository(getStorage, now=()=>new Date().toISOString
     const labels=found?.labels.includes(kind)?found.labels.filter(k=>k!==kind):[...(found?.labels||[]),kind]
     items=items.filter(s=>s.url!==clean.url)
     if(labels.length) items.unshift({url:clean.url,article:clean,labels,saved_at:now()})
-    if(persistent) {
-      try {getStorage().setItem(STORAGE_KEY,JSON.stringify({version:1,items}));warning=''}
-      catch {persistent=false;warning='端末に保存できません。この画面内では保持しますが、再読み込みすると今回の変更が失われます。'}
-    }
-    return state()
+    return persist()
   }
-  return {load,toggle,state}
+  return {load,toggle,bookmark,state}
 }
