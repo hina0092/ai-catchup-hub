@@ -1,5 +1,11 @@
 {
   "format": 1,
   "active": true,
-  "files": {}
+  "files": {
+    "2026-10-24-polly-5246bb157e3b.json": {
+      "id": "polly",
+      "fingerprint": "5246bb157e3bde5a84882be3db49c015aa66271f51bfc6a086547d9bb12b4d4a",
+      "version": 1
+    }
+  }
 }
