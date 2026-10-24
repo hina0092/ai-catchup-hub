@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
+import AskAiDialog from '../components/AskAiDialog.vue'
 
 const props = defineProps({
   stories: { type: Array, required: true },
@@ -22,6 +23,7 @@ const countLabel = computed(() => String(props.stories.length).padStart(2, '0'))
 
 const active = ref(0)
 const opened = ref(null)
+const asking = ref(null), askContext = ref(''), askReturnFocus = ref(null)
 const preferred = ref(new Set())
 const notice = ref('')
 const dialog = ref(null)
@@ -47,6 +49,12 @@ function changeView(view) {
   closeComments()
   emit('change-view', view)
 }
+function openAsk(story, event) {
+  const fromComments = Boolean(dialog.value?.open)
+  askReturnFocus.value = fromComments ? document.getElementById('ask-' + story.id) : event.currentTarget
+  closeComments()
+  asking.value = story
+}
 function moreLike(story) {
   const next = new Set(preferred.value)
   if (next.has(story.id)) next.delete(story.id)
@@ -66,9 +74,10 @@ async function openComments(story, event) {
 }
 function closeComments() { dialog.value?.close() }
 function afterClose() {
-  document.body.style.overflow = ''
+  const another = document.querySelector('dialog[open]')
+  document.body.style.overflow = another ? 'hidden' : ''
   opened.value = null
-  lastTrigger?.focus()
+  if (!another) lastTrigger?.focus()
 }
 function go(index) {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -169,6 +178,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
         <button class="read-comments" @click="openComments(story, $event)">コメントを読む <span>{{ story.comments.length }}件 <span aria-hidden="true">↗</span></span></button>
       </section>
       <div class="actions">
+        <button v-if="publicMode" :id="'ask-' + story.id" class="ask-story" :aria-label="'AIに聞く：' + story.title.replaceAll('\n', '')" @click="openAsk(story, $event)">💬 AIに聞く</button>
         <button v-if="saveEnabled" class="save-story" :aria-pressed="isSaved(story)" :aria-label="(isSaved(story) ? '保存を解除：' : '保存する：') + story.title.replace('\n', '')" @click="toggleSave(story)">{{ isSaved(story) ? '🔖 保存済み' : '🔖 保存する' }}</button>
         <button v-if="!savedView" class="more-like" :aria-pressed="preferred.has(story.id)" @click="moreLike(story)">{{ preferred.has(story.id) ? '✓ 好きなテーマ' : '＋ もっとこれ' }}</button><span v-if="!saveEnabled">読むだけでOK ☕</span>
       </div>
@@ -181,6 +191,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
       <div v-for="item in legacySaved" :key="item.url" class="legacy-saved-card">
         <a :href="item.url" target="_blank" rel="noopener noreferrer">{{ item.article.title }} ↗</a>
         <span>{{ item.article.source }}</span>
+        <button class="ask-story" :aria-label="'AIに聞く：' + item.article.title" @click="openAsk(item.article, $event)">💬 AIに聞く</button>
         <button :aria-label="'保存を解除：' + item.article.title" @click="emit('remove-legacy', item.article)">保存を解除</button>
       </div>
     </section>
@@ -206,12 +217,14 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
         <p class="conversation-end">ここまで読んだら、ニュースがちょっと身近に。☕</p>
         <a class="sheet-source" :href="opened.url" target="_blank" rel="noopener noreferrer">🔗 事実は{{ opened.sourceLabel || '公式記事' }}で確認する ↗</a>
       </div>
-      <div class="sheet-footer">読む専用のコメント欄 · 返信しなくて大丈夫</div>
+      <div class="sheet-footer"><button v-if="publicMode" class="ask-from-comments" @click="openAsk(opened, $event)">💬 この記事をAIに聞く</button><span>読む専用のコメント欄 · 返信しなくて大丈夫</span></div>
     </template>
   </dialog>
+  <AskAiDialog v-if="asking" :story="asking" v-model:context="askContext" :return-focus="askReturnFocus" @close="asking = null" />
 </template>
 
 <style scoped>
+.ask-story{border:1px solid #d3c8df;border-radius:30px;background:#f2edf8;color:#68517c;padding:8px 14px;font-size:12px}.ask-from-comments{display:block;margin:0 auto 6px;padding:8px 14px;border-radius:22px;border:1px solid #d3c8df;background:#f2edf8;color:#68517c;font-size:11px}
 .reader-tabs{display:flex;gap:4px;flex-shrink:0}.reader-tabs button{border-radius:24px;background:transparent;color:#617359;padding:7px 12px;font-size:12px;border:1px solid transparent}.reader-tabs button[aria-pressed=true]{background:#e3ecdc;border-color:#b8c9aa;color:#304b35;font-weight:700}.reader-tabs span{font-size:10px;margin-left:3px}
 .actions{gap:8px;flex-wrap:wrap}.save-story{border:1px solid #c1d0b6;border-radius:30px;background:#f0f5e9;color:#375333;padding:8px 16px;font-size:12px}.save-story[aria-pressed=true]{background:#dae8cc;border-color:#91ac7c}.more-like{margin-left:auto}.saved-help,.snapshot-note{font-size:11px;color:#77836e;line-height:1.8}.saved-help{margin:0 4px 20px}.snapshot-note{padding:8px 11px;background:#edf1e6;border-radius:8px}.storage-warning{font-size:12px;line-height:1.8;padding:13px 16px;border:1px solid #dbc29e;border-radius:12px;background:#fff3df;color:#795d36}
 .saved-empty,.legacy-saved{background:#fffef9;border:1px solid #dce4d5;border-radius:22px;padding:26px;margin-bottom:24px}.saved-empty{text-align:center;scroll-snap-align:start}.saved-empty>span{font-size:32px}.saved-empty h2,.legacy-saved h2{font-size:18px}.saved-empty p,.legacy-saved>p{font-size:12px;color:#6c7868;line-height:1.8}.saved-empty button{border-radius:24px;padding:10px 18px;background:#e3ecdc;color:#304b35;margin-top:10px}.legacy-saved-card{display:grid;gap:8px;padding:16px 0;border-top:1px solid #e5eadd}.legacy-saved-card a{font-size:14px;font-weight:700;overflow-wrap:anywhere}.legacy-saved-card>span{font-size:11px;color:#77836e}.legacy-saved-card button{justify-self:start;border:1px solid #d9e2d0;border-radius:24px;font-size:11px;padding:7px 12px;background:transparent;color:#6a7a68}
