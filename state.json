@@ -16,6 +16,11 @@
       "id": "diffusion",
       "fingerprint": "145604b27bbf9a6937c2784ae8b4413681fd8d709d0db364946427b7c20c2a08",
       "version": 1
+    },
+    "2026-10-24-copilot-954f5f2a865c.json": {
+      "id": "copilot",
+      "fingerprint": "954f5f2a865cf94db379d3c631ab79b215a11961ea68688899742dbfee0fc411",
+      "version": 1
     }
   }
 }
