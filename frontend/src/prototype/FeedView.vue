@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import AskAiDialog from '../components/AskAiDialog.vue'
+import ArticleActionIcon from '../components/ArticleActionIcon.vue'
 
 const props = defineProps({
   stories: { type: Array, required: true },
@@ -22,18 +23,18 @@ const stories = computed(() => props.stories)
 const countLabel = computed(() => String(props.stories.length).padStart(2, '0'))
 
 const active = ref(0)
-const opened = ref(null)
+const expandedComments = ref(new Set())
 const asking = ref(null), askContext = ref(''), askReturnFocus = ref(null)
-const preferred = ref(new Set())
 const notice = ref('')
-const dialog = ref(null)
-const heading = ref(null)
-const commentItems = computed(() => opened.value?.comments || [])
-function avatarIndex(name) { return [...new Set(commentItems.value.map(comment => comment[0]))].indexOf(name) % 4 }
-function replyLabel(parent) {
-  return Number.isInteger(parent) && commentItems.value[parent] ? `${commentItems.value[parent][0]}へ` : '返信'
+function sourceDomain(url) { return new URL(url).hostname }
+function commentAvatar(story, name) {
+  const names = [...new Set(story.comments.map(comment => comment[0]))]
+  return ['🐈', '🌿', '🍊', '🪐'][names.indexOf(name) % 4]
 }
-let lastTrigger, observer, noticeTimer
+function replyLabel(story, parent) {
+  return Number.isInteger(parent) && story.comments[parent] ? `${story.comments[parent][0]}へ` : '返信'
+}
+let observer, noticeTimer
 function notify(message) {
   notice.value = message
   clearTimeout(noticeTimer)
@@ -46,38 +47,24 @@ async function toggleSave(story) {
   notify(props.storageWarning ? '保存状態を確認してください。' : isSaved(story) ? 'このブラウザーに保存しました。' : '保存を解除しました。')
 }
 function changeView(view) {
-  closeComments()
   emit('change-view', view)
 }
 function openAsk(story, event) {
-  const fromComments = Boolean(dialog.value?.open)
-  askReturnFocus.value = fromComments ? document.getElementById('ask-' + story.id) : event.currentTarget
-  closeComments()
+  askReturnFocus.value = event.currentTarget
   asking.value = story
 }
-function moreLike(story) {
-  const next = new Set(preferred.value)
+function toggleComments(story) {
+  const next = new Set(expandedComments.value)
   if (next.has(story.id)) next.delete(story.id)
   else next.add(story.id)
-  preferred.value = next
-  notice.value = next.has(story.id) ? `「${story.category}」が好き、を選びました。目印を付けました。並び順には反映されません。` : '好みの選択を解除しました。'
-  clearTimeout(noticeTimer)
-  noticeTimer = setTimeout(() => notice.value = '', 4500)
+  expandedComments.value = next
 }
-async function openComments(story, event) {
-  lastTrigger = event.currentTarget
-  opened.value = story
+async function closeCommentsFromEnd(story) {
+  toggleComments(story)
   await nextTick()
-  dialog.value.showModal()
-  heading.value.focus()
-  document.body.style.overflow = 'hidden'
-}
-function closeComments() { dialog.value?.close() }
-function afterClose() {
-  const another = document.querySelector('dialog[open]')
-  document.body.style.overflow = another ? 'hidden' : ''
-  opened.value = null
-  if (!another) lastTrigger?.focus()
+  const trigger = document.getElementById('comments-toggle-' + story.id)
+  trigger?.focus({ preventScroll: true })
+  trigger?.scrollIntoView({ block: 'center', behavior: 'instant' })
 }
 function go(index) {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -89,7 +76,7 @@ function observeStories() {
 }
 watch(() => props.stories, async () => {
   active.value = 0
-  if (opened.value && !props.stories.some(s => s.url === opened.value.url)) closeComments()
+  expandedComments.value = new Set()
   await nextTick()
   observeStories()
 })
@@ -107,8 +94,8 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
   <header class="app-header" :class="{ 'reader-header':saveEnabled }">
     <a class="wordmark" :href="homeUrl"><span aria-hidden="true">✳</span> AI Catchup Hub</a>
     <nav v-if="saveEnabled" class="reader-tabs" aria-label="記事の表示">
-      <button :aria-pressed="!savedView" @click="changeView('feed')">✨ 発見</button>
-      <button :aria-pressed="savedView" @click="changeView('saved')">🔖 保存済み <span>{{ savedUrls.length }}</span></button>
+      <button :aria-pressed="!savedView" @click="changeView('feed')">発見</button>
+      <button :aria-pressed="savedView" @click="changeView('saved')">保存済み <span>{{ savedUrls.length }}</span></button>
     </nav>
     <span v-else class="preview-badge">{{ publicMode ? '先行公開' : 'LOCAL PREVIEW' }}</span>
   </header>
@@ -145,11 +132,18 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
     <p v-if="generatedError" class="trial-banner" role="alert">生成結果を表示できませんでした。見本へ切り替えて確認してください。</p>
     <p v-if="trialMode && !publicMode" class="trial-banner">💡 実記事5件の見本 · このチャットで生成<br><small>このページの内容はGeminiの出力ではありません</small></p>
     <template v-if="!savedView">
-      <p v-if="publicMode && edition" class="trial-banner">🌱 毎日19:17に、次の発見を<br><small>最大3記事を自動更新予定。実行時刻は前後することがあります。<br>{{ edition.message }}<br>更新確認：{{ edition.checked }}<br>{{ edition.generated ? '説明・図・会話はAI生成です。事実は元記事でご確認ください。' : '初回の生成が通るまでは、2026/10/24の見本5件を表示します。' }}</small></p>
+      <details v-if="publicMode && edition" class="edition-status">
+        <summary><span>{{ edition.generated ? `🌱 記事追加：${edition.updated}` : `🌱 見本${stories.length}件を表示中` }}</span><span class="edition-detail-label">更新の詳細</span></summary>
+        <div class="edition-details"><p>毎日19:17に、次の発見を。最大3記事を自動更新予定。実行時刻は前後することがあります。</p><p>{{ edition.message }}<br>更新確認：{{ edition.checked }}</p><p>{{ edition.generated ? '説明・図・会話はAI生成です。事実は元記事でご確認ください。' : '初回の生成が通るまでは、2026/10/24の見本5件を表示します。' }}</p></div>
+      </details>
       <p v-else-if="publicMode" class="trial-banner">🌱 まずは5件から、先行公開<br><small>2026/10/24時点の固定記事です。コメントはAIによる架空の会話。ニュースの自動更新は準備中です。</small></p>
     </template>
     <article v-for="(story, index) in stories" :id="`story-${index}`" :key="story.id" :data-index="index" class="story" :class="story.theme" :aria-labelledby="`title-${story.id}`">
-      <div class="story-top"><span class="topic">{{ story.emoji }} {{ story.category }}</span><span class="number">{{ String(index + 1).padStart(2, '0') }} / {{ countLabel }}</span></div>
+      <div class="story-top">
+        <span class="publisher-avatar" aria-hidden="true">{{ story.emoji }}</span>
+        <div class="publisher"><strong>{{ story.source }}</strong><span class="topic">{{ story.category }} · {{ story.date }}</span></div>
+        <span class="number">{{ String(index + 1).padStart(2, '0') }} / {{ countLabel }}</span>
+      </div>
       <h2 :id="`title-${story.id}`">{{ story.title }}</h2>
       <p v-if="story.saved_snapshot" class="snapshot-note">🔖 保存時の内容 · 現在のフィード掲載外</p>
       <p class="lead">{{ story.lead }}</p>
@@ -170,20 +164,35 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
         <section class="example"><h3>💡 例えば、こんなこと</h3><p>{{ story.example }}</p></section>
         <section class="context"><h3>📌 知っておきたいこと</h3><p>{{ story.caution }}</p></section>
       </div>
-      <div class="source"><span>{{ story.source }} · {{ story.date }}</span><a :href="story.url" target="_blank" rel="noopener noreferrer">{{ story.sourceLabel || '公式記事' }} ↗</a></div>
-      <section class="comment-preview" :aria-label="`${story.category}の架空コメントの抜粋`">
+      <a class="source-card" :href="story.url" target="_blank" rel="noopener noreferrer" :aria-label="'元記事を読む：' + story.title.replaceAll('\n', '') + '（新しいタブ）'">
+        <span class="source-card-text"><strong>元記事を読む</strong><span>{{ story.source }} · {{ sourceDomain(story.url) }}</span></span>
+        <span class="source-card-arrow" aria-hidden="true">↗</span>
+      </a>
+      <section v-if="!expandedComments.has(story.id)" class="comment-preview" :aria-label="`${story.category}の架空コメントの抜粋`">
         <div class="comment-preview-heading"><strong>💬 ちょっと気になる会話</strong><span>AIの架空コメント</span></div>
-        <p class="teaser">{{ story.teaser }}</p>
-        <p class="second-teaser">↳ {{ story.comments[story.id === 'sonnet' ? 3 : 1][1] }}</p>
-        <button class="read-comments" @click="openComments(story, $event)">コメントを読む <span>{{ story.comments.length }}件 <span aria-hidden="true">↗</span></span></button>
+        <p class="teaser"><span class="comment-avatar" aria-hidden="true">{{ commentAvatar(story, story.comments[0][0]) }}</span><span>{{ story.teaser }}</span></p>
+        <p class="second-teaser"><span class="comment-avatar" aria-hidden="true">{{ commentAvatar(story, story.comments[story.id === 'sonnet' ? 3 : 1][0]) }}</span><span>↳ {{ story.comments[story.id === 'sonnet' ? 3 : 1][1] }}</span></p>
       </section>
       <div class="actions">
-        <button v-if="publicMode" :id="'ask-' + story.id" class="ask-story" :aria-label="'AIに聞く：' + story.title.replaceAll('\n', '')" @click="openAsk(story, $event)">💬 AIに聞く</button>
-        <button v-if="saveEnabled" class="save-story" :aria-pressed="isSaved(story)" :aria-label="(isSaved(story) ? '保存を解除：' : '保存する：') + story.title.replace('\n', '')" @click="toggleSave(story)">{{ isSaved(story) ? '🔖 保存済み' : '🔖 保存する' }}</button>
-        <button v-if="!savedView" class="more-like" :aria-pressed="preferred.has(story.id)" @click="moreLike(story)">{{ preferred.has(story.id) ? '✓ 好きなテーマ' : '＋ もっとこれ' }}</button><span v-if="!saveEnabled">読むだけでOK ☕</span>
+        <button :id="'comments-toggle-' + story.id" class="read-comments" :aria-expanded="expandedComments.has(story.id)" :aria-controls="'comments-' + story.id" @click="toggleComments(story)"><ArticleActionIcon name="conversation" /><span class="action-label">{{ expandedComments.has(story.id) ? '閉じる' : '会話を読む' }}</span><span class="action-count">{{ story.comments.length }}</span></button>
+        <button v-if="saveEnabled" class="save-story" :aria-pressed="isSaved(story)" :aria-label="(isSaved(story) ? '保存を解除：' : '保存する：') + story.title.replace('\n', '')" @click="toggleSave(story)"><ArticleActionIcon name="bookmark" /><span class="action-label">{{ isSaved(story) ? '保存済み' : '保存する' }}</span></button>
+        <button v-if="publicMode" :id="'ask-' + story.id" class="ask-story" :aria-label="'AIに聞く：' + story.title.replaceAll('\n', '')" @click="openAsk(story, $event)"><ArticleActionIcon name="ai" /><span class="action-label">AIに聞く</span></button>
       </div>
-      <button v-if="index < stories.length - 1" class="next" @click="go(index + 1)">次の発見へ ↓</button>
-      <p v-else class="end-note">☕ ひとまずここまで。どの会話が気になった？</p>
+      <section v-show="expandedComments.has(story.id)" :id="'comments-' + story.id" class="inline-conversation" :aria-label="`${story.category}の架空の会話`">
+        <p class="fiction-notice">AIによる架空の会話 · 全{{ story.comments.length }}件<br>実在の投稿・利用者の声ではありません。</p>
+        <ol class="comments">
+          <li v-for="([name, text, reply, parent], commentIndex) in story.comments" :key="commentIndex" :class="{ reply }">
+            <span class="comment-avatar" aria-hidden="true">{{ commentAvatar(story, name) }}</span>
+            <div class="comment-body"><span class="comment-name">{{ name }}</span><span v-if="reply" class="reply-marker"> ↳ {{ replyLabel(story, parent) }}</span><p>{{ text }}</p></div>
+          </li>
+        </ol>
+        <div class="conversation-end-actions">
+          <button @click="closeCommentsFromEnd(story)">会話を閉じる ↑</button>
+          <button v-if="index < stories.length - 1" @click="go(index + 1)">次の記事へ ↓</button>
+        </div>
+      </section>
+      <button v-if="index < stories.length - 1 && !expandedComments.has(story.id)" class="next" @click="go(index + 1)">次の発見へ ↓</button>
+      <p v-if="index === stories.length - 1" class="end-note">☕ ひとまずここまで。どの会話が気になった？</p>
     </article>
     <section v-if="savedView && legacySaved.length" class="legacy-saved">
       <h2>以前の画面で保存した記事</h2>
@@ -200,46 +209,5 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
   </main>
   <nav class="progress" aria-label="ニュースの位置"><button v-for="(story, index) in stories" :key="story.id" :aria-label="`${index + 1}件目：${story.category}`" :aria-current="active === index ? 'step' : undefined" @click="go(index)"><span></span></button></nav>
   <div class="toast" role="status">{{ notice }}</div>
-  <dialog ref="dialog" class="comments-dialog" aria-labelledby="comments-heading" aria-describedby="fiction-notice" @close="afterClose" @click="event => { if (event.target === dialog) closeComments() }">
-    <template v-if="opened">
-      <div class="sheet-header"><div><p>READ THE CONVERSATION</p><h2 id="comments-heading" ref="heading" tabindex="-1">💬 コメント <span>{{ opened.comments.length }}</span></h2></div><button class="close" aria-label="コメント欄を閉じる" @click="closeComments">✕</button></div>
-      <div class="sheet-scroll">
-        <p id="fiction-notice" class="fiction-notice">🪄 AIによる架空の会話です。<br>実在の投稿・利用者の声ではありません。</p>
-        <p v-if="generatedMode" class="generation-note">初回の実生成を未修正で表示しています。内容は確認中です。</p>
-        <p class="sheet-title">{{ opened.title.replace('\n', '') }}</p>
-        <p v-if="opened.reviewNote" class="review-note">🔎 {{ opened.reviewNote }}</p>
-        <ol class="comments">
-          <li v-for="([name, text, reply, parent], index) in commentItems" :key="index" :class="{ reply }">
-            <span class="avatar" :class="`avatar-${avatarIndex(name)}`" aria-hidden="true">{{ ['🐈','🌿','🍊','🪐'][avatarIndex(name)] }}</span>
-            <div><span class="comment-name">{{ name }}</span><span v-if="reply" class="reply-marker"> ↳ {{ replyLabel(parent) }}</span><p>{{ text }}</p></div>
-          </li>
-        </ol>
-        <p class="conversation-end">ここまで読んだら、ニュースがちょっと身近に。☕</p>
-        <a class="sheet-source" :href="opened.url" target="_blank" rel="noopener noreferrer">🔗 事実は{{ opened.sourceLabel || '公式記事' }}で確認する ↗</a>
-      </div>
-      <div class="sheet-footer"><button v-if="publicMode" class="ask-from-comments" @click="openAsk(opened, $event)">💬 この記事をAIに聞く</button><span>読む専用のコメント欄 · 返信しなくて大丈夫</span></div>
-    </template>
-  </dialog>
   <AskAiDialog v-if="asking" :story="asking" v-model:context="askContext" :return-focus="askReturnFocus" @close="asking = null" />
 </template>
-
-<style scoped>
-.ask-story{border:1px solid #d3c8df;border-radius:30px;background:#f2edf8;color:#68517c;padding:8px 14px;font-size:12px}.ask-from-comments{display:block;margin:0 auto 6px;padding:8px 14px;border-radius:22px;border:1px solid #d3c8df;background:#f2edf8;color:#68517c;font-size:11px}
-.reader-tabs{display:flex;gap:4px;flex-shrink:0}.reader-tabs button{border-radius:24px;background:transparent;color:#617359;padding:7px 12px;font-size:12px;border:1px solid transparent}.reader-tabs button[aria-pressed=true]{background:#e3ecdc;border-color:#b8c9aa;color:#304b35;font-weight:700}.reader-tabs span{font-size:10px;margin-left:3px}
-.actions{gap:8px;flex-wrap:wrap}.save-story{border:1px solid #c1d0b6;border-radius:30px;background:#f0f5e9;color:#375333;padding:8px 16px;font-size:12px}.save-story[aria-pressed=true]{background:#dae8cc;border-color:#91ac7c}.more-like{margin-left:auto}.saved-help,.snapshot-note{font-size:11px;color:#77836e;line-height:1.8}.saved-help{margin:0 4px 20px}.snapshot-note{padding:8px 11px;background:#edf1e6;border-radius:8px}.storage-warning{font-size:12px;line-height:1.8;padding:13px 16px;border:1px solid #dbc29e;border-radius:12px;background:#fff3df;color:#795d36}
-.saved-empty,.legacy-saved{background:#fffef9;border:1px solid #dce4d5;border-radius:22px;padding:26px;margin-bottom:24px}.saved-empty{text-align:center;scroll-snap-align:start}.saved-empty>span{font-size:32px}.saved-empty h2,.legacy-saved h2{font-size:18px}.saved-empty p,.legacy-saved>p{font-size:12px;color:#6c7868;line-height:1.8}.saved-empty button{border-radius:24px;padding:10px 18px;background:#e3ecdc;color:#304b35;margin-top:10px}.legacy-saved-card{display:grid;gap:8px;padding:16px 0;border-top:1px solid #e5eadd}.legacy-saved-card a{font-size:14px;font-weight:700;overflow-wrap:anywhere}.legacy-saved-card>span{font-size:11px;color:#77836e}.legacy-saved-card button{justify-self:start;border:1px solid #d9e2d0;border-radius:24px;font-size:11px;padding:7px 12px;background:transparent;color:#6a7a68}
-@media(max-width:560px){.reader-header{padding-inline:12px;gap:6px}.reader-header .wordmark{font-size:12px;gap:4px}.reader-header .wordmark>span{font-size:25px}.reader-tabs button{font-size:10px;padding:6px 8px}}
-.trial-banner{scroll-snap-align:start;scroll-margin-top:8px}
-.comparison-nav{scroll-snap-align:start;scroll-margin-top:8px}
-.input-nodes>div{white-space:normal;overflow-wrap:anywhere;min-width:0}
-.comparison-nav{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}.comparison-nav a{display:flex;align-items:center;justify-content:center;flex:1;min-width:130px;padding:10px;border:1px solid #d6dfcf;border-radius:12px;text-decoration:none;font-size:11px;color:#617359;background:#fafbf6}.comparison-nav a[aria-current]{background:#e3ecdc;border-color:#a2b795;color:#304b35;font-weight:700}
-.generated-banner{background:#f4ecdc!important;border-color:#e7d5b2!important;color:#725c38!important}.review-note{padding:11px 13px;border-left:3px solid #c8a361;background:#faf3e6;font-size:11px;line-height:1.8;color:#81663d}.generation-note{font-size:10px;color:#8b7656;margin:12px 0}
-.trial-banner{background:#e7eddf;border:1px solid #d2dec6;border-radius:12px;padding:12px 15px;margin:0 0 16px;font-size:12px;color:#4b6548;line-height:1.8}
-.trial-banner small{font-size:10px;color:#72806b}
-.trial-status{font-size:11px;line-height:1.8;color:#756282;padding:10px 12px;background:#eee8f5;border-radius:10px}
-.sequential{gap:15px}
-.sequential>div{position:relative}
-.sequential>div:not(:last-child)::after{content:'→';position:absolute;right:-13px;top:50%;transform:translateY(-50%);color:var(--deep);font-size:11px}
-.original-link{margin-right:12px}
-@media(max-width:360px){.sequential{gap:12px}.sequential>div:not(:last-child)::after{right:-11px}}
-</style>
