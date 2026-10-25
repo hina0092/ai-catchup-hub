@@ -5,6 +5,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
+    'frontend/src/components/ArticleActionIcon.vue',
     'frontend/src/articleQuestion.js', 'frontend/src/components/AskAiDialog.vue',
     'frontend/tests/article-question.test.mjs',
     'frontend/src/readerSnapshots.js', 'frontend/tests/reader-saved.test.mjs',
