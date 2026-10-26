@@ -15,7 +15,8 @@ export function readerSnapshot(story) {
       || !Array.isArray(story.inputs) || story.inputs.length > 4 || !story.inputs.every(n => text(n, 200))
       || !Array.isArray(story.comments) || story.comments.length < 2 || story.comments.length > 20) return invalid()
   const question = optional(story.question, 300), result = optional(story.result, 300)
-  if (story.inputs.length && (!question || !result || !['steps','combine',undefined].includes(story.layout))) return invalid()
+  if (story.inputs.length && (!question || !result || !['steps','combine','compare',undefined].includes(story.layout)
+      || (story.layout === 'compare' && story.inputs.length !== 2))) return invalid()
   const comments = story.comments.map((row, index) => {
     if (!Array.isArray(row) || !text(row[0], 80) || !text(row[1], 1200)
         || ![true,false,0,1].includes(row[2])

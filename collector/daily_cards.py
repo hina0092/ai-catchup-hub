@@ -21,7 +21,7 @@ from collector.gemini import live_allowed
 
 STATUSES = {'waiting', 'ready', 'no_new', 'budget_limit', 'generation_paused',
             'source_unavailable', 'invalid_outputs', 'rate_limit', 'provider_error'}
-HOSTS = {'zenn.dev', 'github.blog', 'aws.amazon.com'}
+HOSTS = {'zenn.dev', 'github.blog', 'aws.amazon.com', 'openai.com', 'blog.google', 'www.anthropic.com'}
 LOGGER = logging.getLogger(__name__)
 DAILY_PROMPT = PROMPT.replace(
     '入力は公開記事を人が確認して要点化した資料です。全文ではありません。',
@@ -110,12 +110,24 @@ def candidates(rows, feed, config, now):
                 or row.get('source') not in config['source_names'] or row['url'] in existing
                 or not isinstance(row.get('title'), str) or not 1 <= len(row['title']) <= 500):
             continue
-        try:
-            date = timestamp(row.get('published_at'))
-        except (TypeError, ValueError):
-            continue
-        if not now - timedelta(days=config['max_age_days']) <= date <= now:
-            continue
+        if (row.get('date_precision') == 'day' and row.get('source') == 'Anthropic News'
+                and urlsplit(row['url']).hostname == 'www.anthropic.com'):
+            try:
+                day = datetime.strptime(row.get('published_on', ''), '%Y-%m-%d').date()
+            except (TypeError, ValueError):
+                continue
+            today = now.astimezone(JST).date()
+            if not today - timedelta(days=config['max_age_days']) <= day <= today:
+                continue
+            # Internal calendar-day sorting boundary, not a publication time.
+            date = datetime.combine(day, datetime.min.time(), tzinfo=JST)
+        else:
+            try:
+                date = timestamp(row.get('published_at'))
+            except (TypeError, ValueError):
+                continue
+            if not now - timedelta(days=config['max_age_days']) <= date <= now:
+                continue
         unique.setdefault(row['url'], {**row, '_date': date})
     ordered = sorted(unique.values(), key=lambda r: (r['_date'], r['url']), reverse=True)
     # Prefer different publishers before filling remaining slots by recency.

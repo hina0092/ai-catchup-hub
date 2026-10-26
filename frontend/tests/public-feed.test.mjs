@@ -26,7 +26,8 @@ test('timeline keeps every comment inline with its reply target and an accessibl
   assert.match(html, /class="publisher-avatar"/)
   assert.ok(html.includes(`aria-controls="comments-${story.id}"`))
   assert.match(html, /aria-expanded="false"/)
-  assert.equal((html.match(/<li[ >]/g) || []).length, story.comments.length)
+  const comments = html.slice(html.indexOf('<ol class="comments">')).split('</ol>')[0]
+  assert.equal((comments.match(/<li[ >]/g) || []).length, story.comments.length)
   for (const [name, text] of story.comments) {
     assert.ok(html.includes(name))
     assert.ok(html.includes(text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;')))

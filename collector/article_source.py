@@ -7,7 +7,8 @@ import re
 
 AGENT = 'AI-Catchup-Hub'
 # Enabling a host also requires a terms review by the operator (config article_hosts).
-SUPPORTED = {'zenn.dev', 'qiita.com', 'github.blog', 'devblogs.microsoft.com', 'aws.amazon.com'}
+SUPPORTED = {'zenn.dev', 'qiita.com', 'github.blog', 'devblogs.microsoft.com', 'aws.amazon.com',
+             'openai.com', 'blog.google', 'www.anthropic.com'}
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -68,6 +69,10 @@ def article_text(url, hosts, limit=12000, reader=read_url):
         return ''
     if parsed.hostname not in SUPPORTED.intersection(hosts):
         return ''
+    # OpenAI's official RSS omits the canonical trailing slash. Normalize only
+    # this known path; keep redirects disabled and check robots on the target.
+    if parsed.hostname == 'openai.com' and parsed.path.startswith('/index/') and not parsed.path.endswith('/'):
+        url = parsed._replace(path=parsed.path + '/').geturl()
     robots_url = f'https://{parsed.hostname}/robots.txt'
     try:
         robots = RobotFileParser()

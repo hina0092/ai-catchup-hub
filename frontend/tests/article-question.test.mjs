@@ -20,6 +20,8 @@ test('question includes source and card data while distinguishing AI explanation
   assert.equal(data.title,story.title)
   assert.equal(data.card_explanation.changed,story.changed)
   assert.deepEqual(data.schematic_diagram.nodes,story.inputs)
+  assert.equal(data.schematic_diagram.layout, 'steps')
+  assert.equal(questionArticle(trialStories.find(s => s.id === 'folders')).schematic_diagram.layout, 'compare')
   assert.match(prompt,/開けない場合は、読んだと装わず/)
   assert.match(prompt,/カードだけで事実を確定せず/)
   assert.match(prompt,/新しい公開日だけを根拠に新機能/)

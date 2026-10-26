@@ -2,6 +2,7 @@
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import AskAiDialog from '../components/AskAiDialog.vue'
 import ArticleActionIcon from '../components/ArticleActionIcon.vue'
+import StoryDiagram from '../components/StoryDiagram.vue'
 
 const props = defineProps({
   stories: { type: Array, required: true },
@@ -147,17 +148,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
       <h2 :id="`title-${story.id}`">{{ story.title }}</h2>
       <p v-if="story.saved_snapshot" class="snapshot-note">🔖 保存時の内容 · 現在のフィード掲載外</p>
       <p class="lead">{{ story.lead }}</p>
-      <figure v-if="story.inputs.length" class="visual" :aria-label="`${story.category}の仕組みの図解`">
-        <div class="visual-head"><span>ひと目でわかる</span><span aria-hidden="true">✦</span></div>
-        <div class="question"><span aria-hidden="true">💬</span> {{ story.question }}</div>
-        <div class="connector" aria-hidden="true">↓</div>
-        <div v-if="story.id === 'earth'" class="plan">🧠 分析の段取りを考える</div>
-        <div class="input-nodes" :class="{ sequential: story.layout === 'steps' }"><div v-for="item in story.inputs" :key="item">{{ item }}</div></div>
-        <div class="connector merge" aria-hidden="true">↓</div>
-        <div class="result">{{ story.result }}</div>
-        <div v-if="story.id === 'skills'" class="destinations"><span>↙ AIサービスA</span><span>AIサービスB ↘</span></div>
-        <figcaption>{{ story.diagramNote }}</figcaption>
-      </figure>
+      <StoryDiagram :story="story" />
       <div class="explanation">
         <p v-if="story.reviewNote" class="review-note">🔎 {{ story.reviewNote }}</p>
         <section><h3>🔎 何が変わった？</h3><p>{{ story.changed }}</p></section>

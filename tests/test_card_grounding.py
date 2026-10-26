@@ -4,6 +4,7 @@ from unittest import TestCase
 
 from collector.card_trial import ROOT, PROMPT, Rejected, validate_inputs, validate_result
 from tests.test_card_trial import result
+from tools.render_card_trial import review_html
 
 
 class GroundingTests(TestCase):
@@ -59,6 +60,25 @@ class GroundingTests(TestCase):
         # This sentence is unsupported but is outside the known regression rules.
         bad = deepcopy(self.good); bad['changed'] = 'すべての作業が自動で完了します。'
         self.assertIn('changed', validate_result(bad, self.article))
+
+    def test_diagrams_compare_two_targets_and_reject_repeated_or_circular_labels(self):
+        value = deepcopy(self.good)
+        value['diagram'].update(layout='compare', nodes=['変更前：名前だけ', '変更後：内容も説明する'])
+        self.assertEqual(validate_result(value, self.article)['diagram']['layout'], 'compare')
+        html = review_html(dict(format=1, results=[dict(id='comparison', status='accepted', card=value)]))
+        figure = html.split('<figure>')[1].split('</figure>')[0]
+        self.assertIn('違いのポイント：', figure)
+        self.assertNotIn('↓', figure)
+        self.assertNotIn(' ＋ ', figure)
+        value['diagram']['nodes'].append('第三の項目')
+        with self.assertRaisesRegex(Rejected, 'diagram_count'):
+            validate_result(value, self.article)
+        value['diagram'].update(layout='steps', nodes=['同じ処理', '同じ処理'])
+        with self.assertRaisesRegex(Rejected, 'diagram_structure'):
+            validate_result(value, self.article)
+        value['diagram'].update(nodes=['入力する', '実行する'], result='実行する')
+        with self.assertRaisesRegex(Rejected, 'diagram_structure'):
+            validate_result(value, self.article)
 
     def test_prompt_restores_requested_voice_without_faking_experience(self):
         self.assertIn('関西弁まじりの短い掛け合い', PROMPT)

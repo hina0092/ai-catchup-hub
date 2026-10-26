@@ -10,7 +10,7 @@ const validTime = v => typeof v === 'string' && /(?:Z|[+-]\d\d:\d\d)$/.test(v) &
 function safeUrl(value) {
   try {
     const u = new URL(value)
-    return u.protocol === 'https:' && ['zenn.dev', 'github.blog', 'aws.amazon.com'].includes(u.hostname) && !u.username && !u.password && !u.search && !u.hash && !u.port
+    return u.protocol === 'https:' && ['zenn.dev', 'github.blog', 'aws.amazon.com', 'openai.com', 'blog.google', 'www.anthropic.com'].includes(u.hostname) && !u.username && !u.password && !u.search && !u.hash && !u.port
   } catch { return false }
 }
 function validDay(v) {
@@ -34,7 +34,8 @@ export function dailyStories(feed) {
       return [r.name, r.text, r.reply_to !== null, r.reply_to]
     })
     const d = c.diagram
-    if (d !== null && (!d || !['steps', 'combine'].includes(d.layout) || !validText(d.question, 70) || !validText(d.result, 70)
+    if (d !== null && (!d || !['steps', 'combine', 'compare'].includes(d.layout) || !validText(d.question, 70) || !validText(d.result, 70)
+        || (d.layout === 'compare' && d.nodes?.length !== 2)
         || !Array.isArray(d.nodes) || d.nodes.length < 2 || d.nodes.length > 4 || !d.nodes.every(n => validText(n, 35)))) throw new Error('invalid daily diagram')
     const [year, month, day] = entry.published_on.split('-').map(Number)
     return {
