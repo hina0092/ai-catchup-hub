@@ -7,6 +7,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 import hashlib
 import json
+import logging
 from pathlib import Path
 import re
 import time
@@ -14,13 +15,14 @@ from urllib.error import HTTPError
 from urllib.parse import urlsplit
 
 from collector.article_source import article_text
-from collector.card_trial import (JST, MODEL, PROMPT, KINDS, Rejected, TEXT_LIMITS,
+from collector.card_trial import (JST, MODEL, PROMPT, KINDS, REASONS, Rejected, TEXT_LIMITS,
                                   exclusive_json, request_card, validate_result)
 from collector.gemini import live_allowed
 
 STATUSES = {'waiting', 'ready', 'no_new', 'budget_limit', 'generation_paused',
             'source_unavailable', 'invalid_outputs', 'rate_limit', 'provider_error'}
 HOSTS = {'zenn.dev', 'github.blog', 'aws.amazon.com'}
+LOGGER = logging.getLogger(__name__)
 DAILY_PROMPT = PROMPT.replace(
     '入力は公開記事を人が確認して要点化した資料です。全文ではありません。',
     '入力source_textは公開記事から機械抽出した本文の一部です。人の確認済み要点ではなく、全文とも限りません。')
@@ -176,8 +178,10 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
         if used:
             sleep(15)
         used += 1; attempts += 1
+        phase = 'response'
         try:
             raw = provider(MODEL, env['GEMINI_API_KEY'], article)
+            phase = 'validation'
             expected = hint if hint != 'auto' else raw.get('article_kind') if isinstance(raw, dict) else None
             result = validate_result(raw, {**article, 'article_kind': expected})
             # Do not publish input excerpts or the private grounding quote list.
@@ -186,8 +190,13 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
                 published_on=article['published_on'], generated_at=now.isoformat(),
                 article_kind=result['article_kind'], card=card))
             successes += 1
-        except Rejected:
+        except Rejected as error:
             output['status'] = 'invalid_outputs'
+            # Public Actions logs: allowlisted codes only, never exception text,
+            # URLs, source excerpts, raw model output, keys or tracebacks.
+            reason = str(error) if str(error) in REASONS else 'invalid_result'
+            LOGGER.warning(json.dumps(dict(event='daily_card_rejected',
+                attempt=attempts, phase=phase, reason=reason), sort_keys=True))
         except HTTPError as error:
             output['status'] = 'rate_limit' if error.code == 429 else 'provider_error'
             if error.code == 429:

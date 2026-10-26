@@ -7,7 +7,7 @@ from unittest import TestCase
 from unittest.mock import Mock
 from urllib.error import HTTPError
 
-from collector.card_trial import ROOT, exclusive_json
+from collector.card_trial import ROOT, Rejected, exclusive_json
 from collector.daily_cards import (checked_feed, configuration, empty_feed, generate,
                                    candidates, DAILY_PROMPT)
 from collector.article_source import article_text
@@ -86,6 +86,41 @@ class DailyCardsTests(TestCase):
         feed = self.generate(rows=[row(), row(1)], reader=read, provider=send)
         self.assertEqual(len(feed['entries']), 1)
         self.assertEqual(send.call_count, 1)
+
+    def test_rejection_logs_fixed_reason_and_phase_without_source_or_raw_output(self):
+        secret = 'PRIVATE_SOURCE_AND_API_KEY'
+        def invalid(*args):
+            value = provider(*args)
+            value['grounding'][0]['quote'] = secret
+            return value
+        with self.assertLogs('collector.daily_cards', level='WARNING') as logs:
+            feed = self.generate(rows=[row()], provider=invalid)
+        diagnostic = json.loads(logs.records[0].getMessage())
+        self.assertEqual(diagnostic, dict(event='daily_card_rejected', attempt=1,
+            phase='validation', reason='grounding_quote'))
+        self.assertEqual(feed['status'], 'invalid_outputs')
+        self.assertNotIn(secret, str(logs.output) + json.dumps(feed))
+        self.assertNotIn('diagnostics', feed)
+
+    def test_response_rejections_are_allowlisted_and_unknown_messages_are_redacted(self):
+        send = Mock(side_effect=[Rejected('incomplete_response'),
+            Rejected('PRIVATE_KEY\n::warning::injected'), Rejected('result_schema')])
+        with self.assertLogs('collector.daily_cards', level='WARNING') as logs:
+            feed = self.generate(provider=send)
+        records = [json.loads(r.getMessage()) for r in logs.records]
+        self.assertEqual(records, [dict(event='daily_card_rejected', attempt=i + 1,
+            phase='response', reason=reason) for i, reason in enumerate(
+                ['incomplete_response', 'invalid_result', 'result_schema'])])
+        self.assertEqual(send.call_count, 3)
+        self.assertEqual(len(list(self.ledger.glob('*.json'))), 3)
+        self.assertEqual(feed['entries'], [])
+        self.assertNotIn('PRIVATE_KEY', str(logs.output))
+        self.assertNotIn('::warning::', str(logs.output))
+
+    def test_valid_generation_emits_no_rejection_diagnostic(self):
+        with self.assertNoLogs('collector.daily_cards', level='WARNING'):
+            feed = self.generate(rows=[row()])
+        self.assertEqual(feed['status'], 'ready')
 
     def test_429_stops_without_retry_and_persists_stop_marker(self):
         send = Mock(side_effect=HTTPError('https://example.com', 429, 'limit', {}, None))
