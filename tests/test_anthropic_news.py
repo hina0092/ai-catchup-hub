@@ -33,7 +33,8 @@ class AnthropicNewsTests(TestCase):
 
     def test_listing_rejects_offsite_links_invalid_dates_and_changed_markup(self):
         for html in (listing('https://evil.test/news/a'), listing('//www.anthropic.com.evil.test/news/a'),
-                     listing('/news/a?secret=x'), listing(date='Oct 99, 2026'), '<a href="/news/example">Undated article</a>'):
+                     listing('/news/a?secret=x'), listing(date='Oct 99, 2026'),
+                     listing(date='Oct 1, 99999999999999999'), '<a href="/news/example">Undated article</a>'):
             with self.subTest(html=html), self.assertRaises(ValueError):
                 collect_news(SOURCE, NOW.isoformat(), reader(html))
 

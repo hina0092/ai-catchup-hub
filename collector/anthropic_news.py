@@ -74,7 +74,7 @@ def collect_news(source, collected_at, reader):
             month, day, year = ''.join(row['date']).strip().replace(',', '').split()
             month_number = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].index(month) + 1
             published_on = datetime(int(year), month_number, int(day)).date().isoformat()
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, OverflowError):
             continue
         result.append(dict(id=hashlib.sha256(url.encode()).hexdigest()[:24],
             title=title, url=url, source=source['name'], category=source['category'],
