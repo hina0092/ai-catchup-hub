@@ -29,6 +29,7 @@ export function questionArticle(article) {
   if (Array.isArray(article.inputs) && article.inputs.length) {
     if (article.inputs.length > 4 || !article.inputs.every(n => validText(n,200))) throw new Error('invalid question diagram')
     data.schematic_diagram = {
+      layout:['steps','combine','compare'].includes(article.layout) ? article.layout : 'combine',
       question:optionalText(article.question,300),
       nodes:[...article.inputs],
       result:optionalText(article.result,300),

@@ -1,4 +1,4 @@
-"""Public RSS 2.0 / Atom collector. Python 3.11+, standard library only."""
+"""Public RSS / Atom and official Anthropic news collector. Standard library only."""
 import argparse
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -13,6 +13,8 @@ import os
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit, urljoin
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
+
+from collector.anthropic_news import collect_news
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = logging.getLogger(__name__)
@@ -145,13 +147,18 @@ def collect(sources, fetcher=fetch):
     now = datetime.now(timezone.utc).isoformat()
     for source in sources:
         try:
-            entries = parse_feed(fetcher(source['url']), source, now)
+            if source.get('format') == 'anthropic_news':
+                entries = collect_news(source, now, fetcher)
+            elif source.get('format', 'rss') == 'rss':
+                entries = parse_feed(fetcher(source['url']), source, now)
+            else:
+                raise ValueError('unsupported source format')
             limit = source.get('max_articles')
             if limit is not None:
                 if type(limit) is not int or limit < 1:
                     raise ValueError('max_articles must be a positive integer')
                 unique = {entry['url']: entry for entry in reversed(entries)}
-                entries = sorted(unique.values(), key=lambda item: (item['published_at'] or '', item['url']), reverse=True)[:limit]
+                entries = sorted(unique.values(), key=lambda item: (item['published_at'] or item.get('published_on', ''), item['url']), reverse=True)[:limit]
         except (OSError, ValueError, ET.ParseError) as error:
             LOG.warning('%s: failed: %s', source['name'], error)
             continue
@@ -159,7 +166,7 @@ def collect(sources, fetcher=fetch):
         LOG.info('%s: success, %d articles', source['name'], len(entries))
         for article in entries:
             articles.setdefault(article['url'], article)
-    result = sorted(articles.values(), key=lambda item: (item['published_at'] or '', item['url']), reverse=True)
+    result = sorted(articles.values(), key=lambda item: (item['published_at'] or item.get('published_on', ''), item['url']), reverse=True)
     return result, successes
 
 

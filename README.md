@@ -27,7 +27,7 @@ AIへの相談は「コピー → いつものAIに貼り付けて送信」の�
 ## ニュースが届く仕組み
 
 ```text
-公開RSSから新着記事を選ぶ
+公開RSS・公式ニュース一覧から新着記事を選ぶ
   → 記事本文の一部を取得する
   → Geminiで日本語の説明・図の材料・架空の会話を生成する
   → 形式・根拠などを検査する
@@ -35,7 +35,7 @@ AIへの相談は「コピー → いつものAIに貼り付けて送信」の�
   → Vueで静的サイトをビルドし、GitHub Pagesへ公開する
 ```
 
-現在の自動生成対象は、Zenn AI・Zenn LLM・GitHub Blog AI & ML・AWS AIです。14日以内の記事から重複や掲載済みURLなどを除き、異なる発行元を優先して選びます。設定は `collector/daily_config.json` にまとめています。
+現在の自動生成対象は、Zenn AI・Zenn LLM・GitHub Blog AI & ML・AWS AI・OpenAI News・Google AI・Anthropic Newsです。Anthropicは公式ニュース一覧、その他は公式に配信されたRSSから収集します。14日以内の記事から重複や掲載済みURLなどを除き、異なる発行元を優先して選びます。1日3送信の上限内で選ぶため、すべての取得元の記事が毎日掲載されるとは限りません。設定は `collector/daily_config.json` にまとめています。
 
 | 項目 | 現在の設定・動作 |
 | --- | --- |

@@ -21,9 +21,10 @@ def review_html(report):
             body += f'<h2>{escape(card["title"])}</h2><p>{escape(card["lead"])}</p>'
             diagram = card['diagram']
             if diagram:
-                sep = ' → ' if diagram['layout'] == 'steps' else ' ＋ '
+                sep = {'steps': ' → ', 'combine': ' ＋ ', 'compare': ' ／ '}[diagram['layout']]
                 nodes = sep.join(escape(n) for n in diagram['nodes'])
-                body += f'<figure><strong>{escape(diagram["question"])}</strong><p>{nodes}</p><b>↓ {escape(diagram["result"])}</b><figcaption>AIの模式図・実際の画面ではありません</figcaption></figure>'
+                label = '違いのポイント：' if diagram['layout'] == 'compare' else '↓ '
+                body += f'<figure><strong>{escape(diagram["question"])}</strong><p>{nodes}</p><b>{label}{escape(diagram["result"])}</b><figcaption>AIの模式図・実際の画面ではありません</figcaption></figure>'
             for key, heading in [('changed', '🔎 何が変わった？'), ('example', '💡 例えば'), ('caution', '📌 知っておきたいこと')]:
                 body += f'<h3>{heading}</h3><p>{escape(card[key])}</p>'
             body += '<div class="fiction">💬 AIによる架空の会話。実在の投稿・利用者の声ではありません。</div><ol>'

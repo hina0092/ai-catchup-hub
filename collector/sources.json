@@ -9,5 +9,8 @@
   {"name": "Qiita GIS", "url": "https://qiita.com/tags/gis/feed", "category": "techniques", "max_articles": 10},
   {"name": "Microsoft .NET", "url": "https://devblogs.microsoft.com/dotnet/feed/", "category": "techniques", "max_articles": 10},
   {"name": "Microsoft Python", "url": "https://devblogs.microsoft.com/python/feed/", "category": "techniques", "max_articles": 10},
-  {"name": "AWS AI", "url": "https://aws.amazon.com/blogs/machine-learning/feed/", "category": "ai-tools", "max_articles": 10}
+  {"name": "AWS AI", "url": "https://aws.amazon.com/blogs/machine-learning/feed/", "category": "ai-tools", "max_articles": 10},
+  {"name": "OpenAI News", "url": "https://openai.com/news/rss.xml", "category": "ai-tools", "max_articles": 10},
+  {"name": "Google AI", "url": "https://blog.google/innovation-and-ai/technology/ai/rss/", "category": "ai-tools", "max_articles": 10},
+  {"name": "Anthropic News", "url": "https://www.anthropic.com/news", "format": "anthropic_news", "category": "ai-tools", "max_articles": 10}
 ]

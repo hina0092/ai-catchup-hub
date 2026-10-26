@@ -100,13 +100,18 @@ def validate_result(value, article=None):
     if diagram is not None:
         if not isinstance(diagram, dict) or set(diagram) != {'layout', 'question', 'nodes', 'result'}:
             raise Rejected('diagram_schema')
-        if diagram['layout'] not in ('steps', 'combine'):
+        if diagram['layout'] not in ('steps', 'combine', 'compare'):
             raise Rejected('diagram_layout')
         nodes = diagram['nodes']
         if not isinstance(nodes, list) or not 2 <= len(nodes) <= 4:
             raise Rejected('diagram_count')
         diagram = dict(layout=diagram['layout'], question=text(diagram['question'], 70),
                        nodes=[text(node, 35) for node in nodes], result=text(diagram['result'], 70))
+        if diagram['layout'] == 'compare' and len(nodes) != 2:
+            raise Rejected('diagram_count')
+        if article is not None and (len(set(diagram['nodes'])) != len(nodes)
+                or diagram['result'] in diagram['nodes']):
+            raise Rejected('diagram_structure')
     comments = value.get('comments')
     if not isinstance(comments, list) or len(comments) != 8:
         raise Rejected('comment_count')
@@ -139,7 +144,7 @@ SCHEMA = {
         **GROUNDING_SCHEMA,
         **{k: string_schema(n) for k, n in TEXT_LIMITS.items()},
         'diagram': {'type': ['object', 'null'], 'properties': {
-            'layout': {'type': 'string', 'enum': ['steps', 'combine']},
+            'layout': {'type': 'string', 'enum': ['steps', 'combine', 'compare']},
             'question': string_schema(70),
             'nodes': {'type': 'array', 'items': string_schema(35), 'minItems': 2, 'maxItems': 4},
             'result': string_schema(70)},
@@ -163,8 +168,13 @@ titleは製品名と意味を保った具体的な見出し。leadは短い概�
 changedは新発表・使い方ガイド・個人の実践記を区別して説明。
 exampleは身近な例。記事の実例か、応用のアイデアか分かるように書く。
 cautionは入力にある条件や未確認事項を簡潔に説明。水増ししない。
-diagramは仕組みが伝わる場合だけ。直列はsteps、材料の組合せはcombine。
-図不要ならnull。質問、2〜4個の短いラベル、結論だけを返す。
+diagramは文章を箱に並べるだけにしない。記事のどの関係を説明する図かquestionに具体的に書く。
+stepsは時間順の2〜4手順。各nodeは「誰・どの仕組みが、何をするか」を具体的にし、resultは実際に得られるもの。
+combineは同時に使う2〜4個の材料。nodeは材料名、resultは組み合わせて得られるもの。手順を混ぜない。
+compareは同じ観点で比べる2つだけ。nodeの先頭に「変更前：」「変更後：」や比較対象名を付け、resultに違いを書く。
+ノードの重複、結論の言い直し、入力にない処理や因果関係、単なる期待を矢印でつながない。
+使い道の提案はexampleへ分ける。研究の目標を達成済みの結果として描かない。
+図の関係を入力から説明できない場合はdiagram=null。図を無理に付けない。
 commentsはAIによる架空の会話8件。ユーザーは読む専用。
 口調は匿名掲示板のような、関西弁まじりの短い掛け合い。前提知識のない人の「何が違うん？」から入る。
 例えば「ファイル開くだけちゃうん？」「会話も引き継ぐんや」「それは助かりそうやな」のように、疑問・返答・感想を混ぜる。
@@ -310,7 +320,7 @@ def run_trial(data, output, *, live=False, env=None, now=None, ledger_dir=None,
 
 
 REASONS = {'invalid_text', 'invalid_language', 'result_schema', 'insufficient_evidence',
-           'diagram_schema', 'diagram_layout', 'diagram_count', 'comment_count',
+           'diagram_schema', 'diagram_layout', 'diagram_count', 'diagram_structure', 'comment_count',
            'comment_schema', 'comment_parent', 'comment_duplicate', 'response_too_large',
            'response_schema', 'incomplete_response'}
 REASONS.update({'article_kind', 'comment_kind', 'grounding_schema', 'grounding_quote',

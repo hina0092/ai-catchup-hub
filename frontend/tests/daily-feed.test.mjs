@@ -47,3 +47,17 @@ test('display time is explicitly JST and unknown time does not claim a successfu
   assert.match(displayTime('2026-10-25T10:18:00Z'),/2026\/10\/25 19:18/)
   assert.equal(displayTime(null),'未実行')
 })
+
+test('official OpenAI and Google articles and comparison diagrams render while lookalike hosts fail', () => {
+  for (const host of ['openai.com', 'blog.google', 'www.anthropic.com']) {
+    const feed = structuredClone(fixture)
+    feed.entries[0].url = `https://${host}/article/`
+    feed.entries[0].card.diagram = { layout:'compare', question:'何が違う？', nodes:['変更前：名前だけ', '変更後：内容も説明'], result:'判断材料の違い' }
+    assert.equal(dailyStories(feed)[0].layout, 'compare')
+    feed.entries[0].url = `https://${host}.evil.test/article/`
+    assert.throws(() => dailyStories(feed))
+    feed.entries[0].url = `https://${host}/article/`
+    feed.entries[0].card.diagram.nodes.push('第三の項目')
+    assert.throws(() => dailyStories(feed))
+  }
+})
