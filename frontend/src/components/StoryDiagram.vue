@@ -26,21 +26,23 @@ const conclusion = computed(() => layout.value === 'compare' ? '違いのポイ�
 </template>
 
 <style scoped>
+.story-diagram{background:#f4f5f6;border-color:#d0d4da;color:#24272b}
+.story-diagram .visual-head,.story-diagram figcaption{color:#4b5057}
 .diagram-question{font-size:14px;font-weight:600;margin:0 0 16px;line-height:1.7}
 .diagram-steps,.diagram-items{list-style:none;padding:0;margin:0}
 .diagram-steps{display:grid;gap:24px}
-.diagram-steps li{display:flex;align-items:center;gap:10px;position:relative;background:var(--surface,#fff);border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
-.diagram-steps li:not(:last-child)::after{content:'↓';position:absolute;left:20px;bottom:-24px;height:24px;color:var(--muted)}
-.step-number{display:grid;place-items:center;flex:0 0 24px;height:24px;border-radius:50%;background:var(--tone);font-size:12px}
+.diagram-steps li{display:flex;align-items:center;gap:10px;position:relative;background:#fff;border:1px solid #c5cbd2;border-radius:8px;padding:12px;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+.diagram-steps li:not(:last-child)::after{content:'↓';position:absolute;left:20px;bottom:-24px;height:24px;color:#3f4650}
+.step-number{display:grid;place-items:center;flex:0 0 24px;height:24px;border-radius:50%;background:#eef0f2;font-size:12px}
 .diagram-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.diagram-items li{background:var(--surface,#fff);border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px;line-height:1.8;overflow-wrap:anywhere}
+.diagram-items li{background:#fff;border:1px solid #c5cbd2;border-radius:8px;padding:12px;font-size:13px;line-height:1.8;overflow-wrap:anywhere}
 .diagram-items.combine{display:flex;flex-wrap:wrap;gap:24px;justify-content:center}
 .combine li{flex:1 1 100px;position:relative}
-.combine li:not(:last-child)::after{content:'＋';position:absolute;right:-23px;top:50%;transform:translateY(-50%);width:22px;text-align:center;color:var(--muted)}
-.diagram-join{display:flex;justify-content:center;align-items:center;gap:8px;padding:10px;font-size:12px;color:var(--muted)}
+.combine li:not(:last-child)::after{content:'＋';position:absolute;right:-23px;top:50%;transform:translateY(-50%);width:22px;text-align:center;color:#3f4650}
+.diagram-join{display:flex;justify-content:center;align-items:center;gap:8px;padding:10px;font-size:12px;color:#3f4650}
 .diagram-join>span:first-child{font-size:20px}
-.diagram-conclusion{background:var(--surface,#fff);border:1px solid var(--line);border-radius:8px;padding:12px}
-.diagram-conclusion>span{font-size:11px;color:var(--muted)}
+.diagram-conclusion{background:#eaf3ff;border:1px solid #8db4df;border-radius:8px;padding:12px;color:#173f6b}
+.diagram-conclusion>span{font-size:11px;color:#284e78}
 .diagram-conclusion p{font-size:14px;font-weight:600;line-height:1.8;margin:4px 0 0;overflow-wrap:anywhere}
 .compare+.diagram-conclusion{margin-top:14px}
 @media(max-width:400px){.diagram-items{grid-template-columns:1fr}.diagram-items.combine{display:grid;grid-template-columns:1fr;gap:24px}.combine li:not(:last-child)::after{right:auto;left:50%;top:auto;bottom:-24px;transform:translateX(-50%);height:24px}}
