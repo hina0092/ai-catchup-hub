@@ -82,6 +82,7 @@ test('update notice starts collapsed while preserving status, schedule and fallb
   assert.match(html, /見本5件を表示中/)
   assert.match(html, /更新の詳細/)
   assert.match(html, /初回の自動更新を待っています/)
-  assert.match(html, /毎日19:17/)
+  assert.match(html, /朝6時までの更新を目標/)
+  assert.match(html, /前夜23:17と午前0:17/)
   assert.match(html, /2026\/10\/24の見本5件/)
 })

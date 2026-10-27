@@ -135,7 +135,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
     <template v-if="!savedView">
       <details v-if="publicMode && edition" class="edition-status">
         <summary><span>{{ edition.generated ? `🌱 記事追加：${edition.updated}` : `🌱 見本${stories.length}件を表示中` }}</span><span class="edition-detail-label">更新の詳細</span></summary>
-        <div class="edition-details"><p>毎日19:17に、次の発見を。最大3記事を自動更新予定。実行時刻は前後することがあります。</p><p>{{ edition.message }}<br>更新確認：{{ edition.checked }}</p><p>{{ edition.generated ? '説明・図・会話はAI生成です。事実は元記事でご確認ください。' : '初回の生成が通るまでは、2026/10/24の見本5件を表示します。' }}</p></div>
+        <div class="edition-details"><p>朝6時までの更新を目標に、前夜23:17と午前0:17に実行を予約しています。合格した記事を1日最大3件追加します。開始の遅れや生成の失敗により、朝6時までに追加できない場合があります。</p><p>{{ edition.message }}<br>更新確認：{{ edition.checked }}</p><p>{{ edition.generated ? '説明・図・会話はAI生成です。事実は元記事でご確認ください。' : '初回の生成が通るまでは、2026/10/24の見本5件を表示します。' }}</p></div>
       </details>
       <p v-else-if="publicMode" class="trial-banner">🌱 まずは5件から、先行公開<br><small>2026/10/24時点の固定記事です。コメントはAIによる架空の会話。ニュースの自動更新は準備中です。</small></p>
     </template>

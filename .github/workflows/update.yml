@@ -8,7 +8,7 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: '17 10 * * *' # 19:17 JST; GitHub may delay the start.
+    - cron: '17 14,15 * * *' # 23:17 and 00:17 JST; target availability by 06:00, not guaranteed.
   push:
     branches: [main]
   pull_request:
