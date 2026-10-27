@@ -25,7 +25,7 @@ HOSTS = {'zenn.dev', 'github.blog', 'aws.amazon.com', 'openai.com', 'blog.google
 LOGGER = logging.getLogger(__name__)
 DAILY_PROMPT = PROMPT.replace(
     '入力は公開記事を人が確認して要点化した資料です。全文ではありません。',
-    '入力source_textは公開記事から機械抽出した本文の一部です。人の確認済み要点ではなく、全文とも限りません。')
+    '入力evidence_candidatesは公開記事から機械抽出した本文の一部と見出しです。人の確認済み要点ではなく、全文とも限りません。')
 DAILY_PROMPT = DAILY_PROMPT.replace(
     'article_kindは入力の値をそのまま返す。guideは既存機能の手順紹介で、新発表と呼ばない。',
     'article_kindは記事の内容から判定する。入力がautoの場合も公開日だけを根拠にannouncementにしない。'

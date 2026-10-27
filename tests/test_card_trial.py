@@ -142,9 +142,12 @@ class CardTrialTests(TestCase):
                 self.assertNotIn('SECRET', str(caught.exception))
 
     def test_live_adapter_uses_one_bounded_request_without_tools_or_url_key(self):
+        article = self.data['articles'][0]
+        card = result(article)
+        card['grounding'] = [dict(field=ref['field'], evidence_id=1) for ref in card['grounding']]
         response = Mock(); response.__enter__ = Mock(return_value=response); response.__exit__ = Mock(return_value=False)
         response.read.return_value = json.dumps({'candidates': [{'finishReason': 'STOP',
-            'content': {'parts': [{'text': json.dumps(result(), ensure_ascii=False)}]}}]}).encode()
+            'content': {'parts': [{'text': json.dumps(card, ensure_ascii=False)}]}}]}).encode()
         with patch('collector.card_trial.build_opener') as opener:
             opener.return_value.open.return_value = response
             value = request_card(MODEL, 'SECRET', self.data['articles'][0])
@@ -155,7 +158,10 @@ class CardTrialTests(TestCase):
             self.assertNotIn('SECRET', req.data.decode())
             self.assertNotIn('tools', payload)
             self.assertEqual(payload['generationConfig']['maxOutputTokens'], 6144)
-            self.assertEqual(len(validate_result(value)['comments']), 8)
+            self.assertEqual(len(validate_result(value, article)['comments']), 8)
+            data = json.loads(payload['contents'][0]['parts'][0]['text'])
+            self.assertNotIn('source_text', data)
+            self.assertTrue(data['evidence_candidates'])
 
     def test_report_excludes_secret_errors_and_rejected_raw_output(self):
         self.run_trial(provider=Mock(side_effect=ValueError('SECRET_TEST_ONLY')))
