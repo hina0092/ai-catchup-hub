@@ -19,6 +19,7 @@ from urllib.request import Request, build_opener
 from collector.article_source import NoRedirect
 from collector.gemini import live_allowed
 from collector.card_grounding import KINDS, META, GROUNDING_SCHEMA, validate_grounding
+from collector.card_evidence import evidence_candidates, evidence_schema, restore_grounding
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = 2
@@ -191,8 +192,13 @@ practiceは個人の実践、researchは研究、announcementだけが新発表�
 unsupported_termsに指定された語は、疑問や例でも使わない。確認できていない具体性を増やさない。
 comment_kindsに各コメントの種類を記入。fact=事実説明、question=疑問、opinion=感想・期待。
 事実の文を疑問や感想と偽って分類しない。
-groundingは根拠の抜粋。title/lead/changed/example/cautionに各1個以上、図があればdiagram、
-factのコメントにはcomments.0〜comments.7にも付ける。quoteは入力から正確に抜き出す。
+入力evidence_candidatesは元記事の見出し・本文からプログラムが切り出した根拠候補。全文とは限らない。
+groundingはfieldとevidence_idの組。引用文を生成・翻訳・書き写さず、主張を支える根拠候補の番号だけを選ぶ。
+title/lead/changed/example/cautionに各1個以上、図があればdiagram、factのコメントにはcomments.0〜comments.7にも付ける。
+fieldは指定された値だけを使う。存在しない番号や別の記事の番号を作らない。同じ根拠が支える複数のfieldには同じ番号を使ってよい。
+evidence_idは文字列でなく整数。詳しい主張にはpart=bodyの候補を選び、見出しだけを根拠に詳細を断言しない。
+diagram=nullならdiagramの根拠は付けない。
+根拠候補にない内容を補わず、必要な根拠が見つからなければsufficient=falseにする。
 提案のexampleも着想の根拠を付け、提案であることを本文に明記する。
 入力を引用できても内容が正しいとは限らないので、抜粋が本当に断言を支えるか見直す。
 JSONだけを返す。形式検証を通すために情報を創作しない。'''
@@ -201,11 +207,15 @@ JSONだけを返す。形式検証を通すために情報を創作しない。'
 def request_card(model, key, article, *, prompt=PROMPT):
     if model != MODEL:
         raise Rejected('model_not_allowed')
+    pool = evidence_candidates(article)
+    # The candidates already contain the original text. Avoid sending it twice.
+    wire_article = {k: v for k, v in article.items() if k != 'source_text'}
+    wire_article['evidence_candidates'] = pool
     payload = {
         'systemInstruction': {'parts': [{'text': prompt}]},
-        'contents': [{'role': 'user', 'parts': [{'text': json.dumps(article, ensure_ascii=False)}]}],
+        'contents': [{'role': 'user', 'parts': [{'text': json.dumps(wire_article, ensure_ascii=False)}]}],
         'generationConfig': {'maxOutputTokens': 6144, 'responseMimeType': 'application/json',
-                             'responseJsonSchema': SCHEMA},
+                             'responseJsonSchema': evidence_schema(SCHEMA, pool)},
     }
     req = Request(f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
                   data=json.dumps(payload, ensure_ascii=False).encode(),
@@ -221,11 +231,13 @@ def request_card(model, key, article, *, prompt=PROMPT):
             raise Rejected('incomplete_response')
         parts = candidates[0]['content']['parts']
         output = ''.join(p.get('text', '') for p in parts if not p.get('thought'))
-        return json.loads(output)
+        value = json.loads(output)
     except Rejected:
         raise
     except (KeyError, TypeError, ValueError, AttributeError):
         raise Rejected('response_schema') from None
+    # Keep fixed reference errors separate from malformed provider responses.
+    return restore_grounding(value, pool, Rejected)
 
 
 def exclusive_json(path, value):
@@ -324,7 +336,8 @@ REASONS = {'invalid_text', 'invalid_language', 'result_schema', 'insufficient_ev
            'comment_schema', 'comment_parent', 'comment_duplicate', 'response_too_large',
            'response_schema', 'incomplete_response'}
 REASONS.update({'article_kind', 'comment_kind', 'grounding_schema', 'grounding_quote',
-                'grounding_missing', 'unsupported_announcement', 'unsupported_detail'})
+                'grounding_missing', 'grounding_reference_schema', 'grounding_reference',
+                'unsupported_announcement', 'unsupported_detail'})
 
 
 def main():

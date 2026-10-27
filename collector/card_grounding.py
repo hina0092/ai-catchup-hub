@@ -3,6 +3,8 @@ import re
 
 KINDS = ('announcement', 'research', 'guide', 'practice')
 META = {'article_kind', 'comment_kinds', 'grounding'}
+GROUNDING_FIELDS = ('title', 'lead', 'changed', 'example', 'caution', 'diagram',
+                    *(f'comments.{i}' for i in range(8)))
 
 
 def validate_grounding(value, article, reject):
@@ -15,7 +17,7 @@ def validate_grounding(value, article, reject):
     refs = value.get('grounding')
     if not isinstance(refs, list) or not 5 <= len(refs) <= 22:
         raise reject('grounding_schema')
-    required = {'title', 'lead', 'changed', 'example', 'caution'}
+    required = set(GROUNDING_FIELDS[:5])
     if value.get('diagram') is not None:
         required.add('diagram')
     required.update(f'comments.{i}' for i, kind in enumerate(kinds) if kind == 'fact')
