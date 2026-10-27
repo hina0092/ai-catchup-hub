@@ -63,6 +63,26 @@ class DailyCardsTests(TestCase):
         self.assertEqual(self.generate(provider=send)['status'], 'budget_limit')
         send.assert_not_called()
 
+    def test_morning_schedule_uses_new_day_budget_once_without_resetting_previous_reservations(self):
+        night = NOW.replace(hour=23, minute=17)
+        for i in range(3):
+            exclusive_json(self.ledger / f'{night.date().isoformat()}-prior{i}.json', {})
+        send = Mock(side_effect=provider)
+        blocked = self.generate(now=night, provider=send)
+        self.assertEqual(blocked['status'], 'budget_limit')
+        send.assert_not_called()
+        morning = (night + timedelta(days=1)).replace(hour=0, minute=17)
+        feed = self.generate(now=morning, provider=send, feed=blocked)
+        self.assertEqual(send.call_count, 3)
+        self.assertEqual(feed['status'], 'ready')
+        self.assertEqual(len(feed['entries']), 3)
+        self.assertEqual(len(list(self.ledger.glob('*.json'))), 6)
+        later = self.generate(now=morning.replace(hour=5), provider=send, feed=feed)
+        self.assertEqual(send.call_count, 3)
+        self.assertEqual(later['status'], 'budget_limit')
+        self.assertEqual(later['entries'], feed['entries'])
+        self.assertEqual(later['updated_at'], feed['updated_at'])
+
     def test_failed_persistence_prevents_provider(self):
         send = Mock()
         with self.assertRaises(OSError):

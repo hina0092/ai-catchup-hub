@@ -21,7 +21,8 @@ const fixture = {
 test('deployed export renders without preview links and describes automatic updates honestly', async () => {
   dailyStories(deployed)
   const html = await renderToString(createSSRApp(PublicFeed))
-  assert.match(html,/毎日19:17/)
+  assert.match(html,/朝6時までの更新を目標/)
+  assert.match(html,/前夜23:17と午前0:17/)
   assert.match(html,/AIによる架空の会話/)
   assert.doesNotMatch(html,/catchup-preview\.html|LOCAL PREVIEW/)
   assert.equal((html.match(/<article /g)||[]).length,deployed.entries.length||5)
