@@ -1,9 +1,142 @@
 {
   "format": 1,
-  "checked_at": "2026-10-29T04:37:03.095330+09:00",
-  "updated_at": "2026-10-29T04:37:03.095330+09:00",
+  "checked_at": "2026-10-30T04:40:23.534679+09:00",
+  "updated_at": "2026-10-30T04:40:23.534679+09:00",
   "status": "ready",
   "entries": [
+    {
+      "id": "af21574bd1bc9e549a97c",
+      "url": "https://aws.amazon.com/blogs/machine-learning/building-intent-driven-ui-testing-with-amazon-nova-act/",
+      "source": "AWS AI",
+      "published_on": "2026-10-30",
+      "generated_at": "2026-10-30T04:40:23.534679+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "Amazon Nova Actを活用したUIテストの構築",
+        "lead": "企業のエプシロンが、急速なアプリ変更に対応するためにAmazon Nova Actを用いたインテント駆動型UIテストを導入した事例を紹介します。",
+        "changed": "Amazon Nova ActとAmazon Bedrock AgentCore Browser Toolを組み合わせて、自然言語によるインテント駆動型のUIテスト機能を提供します。",
+        "example": "エプシロンのプラットフォームにおける「エージェントの作成」フローの自動化などが例として挙げられています。",
+        "caution": "チームごとにブラウザインフラの立ち上げや依存関係の管理を行うと重複した労力が生じる課題があります。",
+        "diagram": {
+          "layout": "steps",
+          "question": "プラットフォームでUIテストのワークフローが実行されるまでの流れは？",
+          "nodes": [
+            "ユーザーがプラットフォームAPIでワークフローを作成する",
+            "バックグラウンドのタスクランナーがブラウザセッションを開く",
+            "Amazon Nova Actを介してステップを実行する"
+          ],
+          "result": "テストの実行結果やスクリーンショット、セッションIDが保存される"
+        },
+        "comments": [
+          {
+            "name": "みけ",
+            "text": "UIテストを自然言語でやれるんか？",
+            "reply_to": null
+          },
+          {
+            "name": "クロ",
+            "text": "プロンプトの指示をそのまま実行してくれるみたいやで。",
+            "reply_to": 0
+          },
+          {
+            "name": "シロ",
+            "text": "CSSセレクタの変更でテストが壊れにくくなるのは助かるな。",
+            "reply_to": 1
+          },
+          {
+            "name": "トラ",
+            "text": "今までのテストはどうなるんやろ？",
+            "reply_to": null
+          },
+          {
+            "name": "タマ",
+            "text": "既存の回帰テストもそのまま残して併用する形やな。",
+            "reply_to": 3
+          },
+          {
+            "name": "モモ",
+            "text": "チームごとに環境を作らんでいいのは楽そうやな。",
+            "reply_to": 4
+          },
+          {
+            "name": "ジョン",
+            "text": "裏ではWebSocketとかでブラウザを動かしてるんか？",
+            "reply_to": null
+          },
+          {
+            "name": "ハチ",
+            "text": "インフラの管理をせんでええのは助かるわ。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "a90461328731011d4db8d",
+      "url": "https://zenn.dev/sugawara_ai/articles/ai-news-20261029",
+      "source": "Zenn AI",
+      "published_on": "2026-10-30",
+      "generated_at": "2026-10-30T04:40:23.534679+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "Gemini 4 Carbonが1位でもまだ使えない理由",
+        "lead": "Googleが発表したGemini 4 Carbonがベンチマークの総合指数で1位を獲得したものの、現時点では一部のサイバー防御担当者向けの提供にとどまり一般には使えない理由を解説します。",
+        "changed": "Google DeepMindが新しいAIモデルとしてGemini 4 Carbonを発表しました。共通テストのベンチマーク総合指数で59点を記録し1位となっていますが、提供先はサイバー防御を行う一部の人たちに限定されています。",
+        "example": "モーターショーに出展されたかっこいい試作車のようなもので、発表されても明日の通勤に使えない状態に例えられます。",
+        "caution": "企業や一般向けの提供時期は「できるだけ早く」とされており、具体的な日付は明らかにされていません。",
+        "diagram": {
+          "layout": "compare",
+          "question": "Geminiの発表版と現在使える版はどう違うのか？",
+          "nodes": [
+            "変更前：発表された版（Gemini 4 Carbon）",
+            "変更後：今使える版（Argon）"
+          ],
+          "result": "Carbonは1位だが一部の人しか使えず、今実際に使えるのは2週間前に出たArgonのほうになる。"
+        },
+        "comments": [
+          {
+            "name": "みかん",
+            "text": "ベンチマークで1位なんやったらすぐ使えるんちゃうん？",
+            "reply_to": null
+          },
+          {
+            "name": "匿名",
+            "text": "それが最初の相手はサイバー防御の人だけらしいで。",
+            "reply_to": 0
+          },
+          {
+            "name": "しお",
+            "text": "一般向けはいつになるんか日付が出てないんやな。",
+            "reply_to": 1
+          },
+          {
+            "name": "てつ",
+            "text": "セキュリティの試験ですごい点数出てるのに惜しいなあ。",
+            "reply_to": 2
+          },
+          {
+            "name": "ぽん",
+            "text": "例えにあった試作車みたいなもんか。",
+            "reply_to": 3
+          },
+          {
+            "name": "もこ",
+            "text": "今使えるのはArgonの方なんやね。",
+            "reply_to": 4
+          },
+          {
+            "name": "よッしー",
+            "text": "名前が新しいからって飛びつかん方がええんか。",
+            "reply_to": 5
+          },
+          {
+            "name": "ろく",
+            "text": "しっかり今使える版を触る方が大事やねんなあ。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "aa3fee8e36f699db3bbe4",
       "url": "https://zenn.dev/izu_moon/articles/98f46d6c0ea1be",
@@ -132,6 +265,72 @@
           {
             "name": "ぽん",
             "text": "40万回以上クリアされてるらしいからすごいわ",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "ac7c1db1d24f97b169309",
+      "url": "https://blog.google/company-news/inside-google/around-the-globe/google-asia/e-conomy-sea-report-2026/",
+      "source": "Google AI",
+      "published_on": "2026-10-21",
+      "generated_at": "2026-10-30T04:40:23.534679+09:00",
+      "article_kind": "research",
+      "card": {
+        "title": "東南アジアのデジタル経済規模が3,680億ドルに到達",
+        "lead": "グーグルなどが発表した最新レポートによると、東南アジアのデジタル経済は2026年に3,680億ドルに達する見込みです。",
+        "changed": "11回目となるe-Conomy SEAレポートにおいて、生成AIの普及により東南アジアのデジタル経済が前年比17%増の3,680億ドル規模に成長し、2035年には1兆ドル超へ向かうことが示されました。",
+        "example": "Eコマース分野では、ショッパーがマルチモーダル検索やアプリ内アシスタントを活用して買い物を進める事例が挙げられています。",
+        "caution": "利用者が安心して代理購入機能を使うためには、プライバシー保護の仕組みや透明性のある情報提供が求められています。",
+        "diagram": {
+          "layout": "compare",
+          "question": "東南アジアのデジタル経済規模はどう変わる？",
+          "nodes": [
+            "変更前：2026年のデジタル経済規模",
+            "変更後：2035年の予測規模"
+          ],
+          "result": "2026年の3,680億ドルから2035年には1兆ドル超へと拡大する予測です。"
+        },
+        "comments": [
+          {
+            "name": "みかん",
+            "text": "東南アジアのデジタル経済が3,680億ドルになるってほんま？",
+            "reply_to": null
+          },
+          {
+            "name": "すず",
+            "text": "レポートに2026年の予測として書いてあるみたいやで。",
+            "reply_to": 0
+          },
+          {
+            "name": "たか",
+            "text": "生成AIの使い方もかなり広がってきてるんやな。",
+            "reply_to": 1
+          },
+          {
+            "name": "ろく",
+            "text": "2035年には1兆ドルを超える規模になる予測が出とる。",
+            "reply_to": 2
+          },
+          {
+            "name": "かりん",
+            "text": "データセンターもそれだけ増やさんとあかんのちゃう？",
+            "reply_to": 3
+          },
+          {
+            "name": "じん",
+            "text": "インフラの拡張や新しい取引ルールも必要になるらしいで。",
+            "reply_to": 4
+          },
+          {
+            "name": "とろ",
+            "text": "容量を3倍に増やす計画が求められとるみたいやね。",
+            "reply_to": 5
+          },
+          {
+            "name": "ぽん",
+            "text": "地域全体でルールを整えていくのは大事そうやな。",
             "reply_to": 6
           }
         ]
