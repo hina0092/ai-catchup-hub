@@ -45,7 +45,7 @@ test('article byline uses its source and topic emoji and repeated speakers keep 
   assert.match(html, /<strong>取得元 &lt;著者&gt;<\/strong>/)
   assert.doesNotMatch(html, /<strong>AI Catchup Hub<\/strong>/)
   const comments = html.slice(html.indexOf('<ol class="comments">')).split('</ol>')[0]
-  const avatars = [...comments.matchAll(/class="comment-avatar" aria-hidden="true">([^<]+)<\/span>/g)].map(match => match[1])
+  const avatars = [...comments.matchAll(/<img[^>]+src="([^"]+)"/g)].map(match => match[1])
   assert.equal(avatars.length, story.comments.length)
   const assigned = new Map()
   story.comments.forEach(([name], index) => {

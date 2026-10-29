@@ -27,6 +27,30 @@ def provider(model, key, article):
 
 
 class DailyCardsTests(TestCase):
+    def test_repeated_cast_is_rejected_without_losing_previous_card(self):
+        first = self.generate(rows=[row(0)])
+        def repeated(model, key, article):
+            return provider(model, key, {k: v for k, v in article.items() if k != 'previous_commenters'})
+        with self.assertLogs('collector.daily_cards', level='WARNING') as logs:
+            second = self.generate(rows=[row(1)], feed=first, provider=repeated)
+        self.assertEqual(second['entries'], first['entries'])
+        self.assertEqual(second['updated_at'], first['updated_at'])
+        self.assertEqual(second['status'], 'invalid_outputs')
+        self.assertIn('comment_cast_repeated', logs.output[0])
+        self.assertNotIn('previous_commenters', json.dumps(second))
+
+    def test_previous_cast_is_passed_to_next_request_and_changes_in_same_run(self):
+        received = []
+        def send(model, key, article):
+            received.append(article.get('previous_commenters', []))
+            return provider(model, key, article)
+        feed = self.generate(provider=send)
+        self.assertEqual(len(feed['entries']), 3)
+        self.assertEqual(received[0], [])
+        self.assertEqual(len(received[1]), 4)
+        self.assertNotEqual(set(received[1]), set(received[2]))
+        self.assertNotIn('previous_commenters', json.dumps(feed))
+
     def setUp(self):
         self.temp = TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.ledger = Path(self.temp.name)

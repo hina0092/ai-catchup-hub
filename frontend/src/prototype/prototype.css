@@ -54,3 +54,4 @@
 @media(max-width:400px){.actions{gap:6px}.actions button{padding-inline:4px;gap:4px}.actions .action-icon{width:16px;height:16px;flex-basis:16px}.actions .action-label{font-size:12px}}
 @media(max-width:350px){.actions .action-count{display:none}}
 @media(prefers-reduced-motion:reduce){.actions button{transition:none}}
+.comment-avatar{overflow:hidden}.comment-avatar img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}

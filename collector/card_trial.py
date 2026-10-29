@@ -20,6 +20,7 @@ from collector.article_source import NoRedirect
 from collector.gemini import live_allowed
 from collector.card_grounding import KINDS, META, GROUNDING_SCHEMA, validate_grounding
 from collector.card_evidence import evidence_candidates, evidence_schema, restore_grounding
+from collector.commenters import NAMES, cast_prompt, validate_cast
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = 2
@@ -92,7 +93,7 @@ def validate_inputs(data):
     return rows
 
 
-def validate_result(value, article=None):
+def validate_result(value, article=None, *, fixed_cast=False):
     if not isinstance(value, dict) or type(value.get('sufficient')) is not bool:
         raise Rejected('result_schema')
     if value['sufficient'] is False:
@@ -138,6 +139,8 @@ def validate_result(value, article=None):
         seen.add(body)
         clean.append(dict(name=text(comment['name'], 18, False, field=f'comments.{index}.name'),
                           text=body, reply_to=parent))
+    if fixed_cast:
+        validate_cast(clean, Rejected, (article or {}).get('previous_commenters', ()))
     if has_grounding:
         validate_grounding(value, article, Rejected)
     return {**result, 'diagram': diagram, 'comments': clean,
@@ -162,7 +165,7 @@ SCHEMA = {
             'required': ['layout', 'question', 'nodes', 'result'], 'additionalProperties': False},
         'comments': {'type': 'array', 'minItems': 8, 'maxItems': 8, 'items': {
             'type': 'object', 'properties': {
-                'name': string_schema(18), 'text': string_schema(100),
+                'name': {'type': 'string', 'enum': list(NAMES)}, 'text': string_schema(100),
                 'reply_to': {'type': ['integer', 'null'], 'description': '返信先の0始まりの番号。必ず先行コメントを参照。新スレッドならnull。'}},
             'required': ['name', 'text', 'reply_to'], 'additionalProperties': False}},
     },
@@ -192,8 +195,8 @@ commentsはAIによる架空の会話8件。ユーザーは読む専用。
 口調は匿名掲示板のような、関西弁まじりの短い掛け合い。前提知識のない人の「何が違うん？」から入る。
 例えば「ファイル開くだけちゃうん？」「会話も引き継ぐんや」「それは助かりそうやな」のように、疑問・返答・感想を混ぜる。
 例文の内容は入力に根拠がある場合だけ使い、コピペしない。全員を強い関西弁にする必要はない。
-名前は「ねこ背」「窓多すぎ」などの匿名名。編集部A・初心者B・先輩Cなど教材の役割名にしない。
-毎回別の人物が集まり、素朴な疑問と比較・背景を中心に短くやり取りする。
+名前・性格・口調は後述の固定メンバーに従う。教材の役割名にしない。
+固定メンバーの中で組み合わせを変え、素朴な疑問と比較・背景を中心に短くやり取りする。
 全員が説明役にならない。軽いツッコミ、皮肉、反論はよいが、毎回無理に対立させない。
 実在の投稿・世論・利用実績に見せず「使ったらできた」など架空の体験を作らない。
 根拠がない数字を作らない。初心者の誤解は同じ会話で根拠に沿って訂正する。
@@ -216,6 +219,7 @@ diagram=nullならdiagramの根拠は付けない。
 出力直前に、各説明欄に日本語があるか、各文字数上限内か、必要な根拠番号が入力候補に存在するかを見直す。
 修正は入力の根拠の範囲内に限り、情報を足して条件を埋めない。根拠不足ならsufficient=false。
 JSONだけを返す。形式検証を通すために情報を創作しない。'''
+PROMPT += '\n' + cast_prompt()
 
 
 def request_card(model, key, article, *, prompt=PROMPT):
@@ -294,7 +298,9 @@ def run_trial(data, output, *, live=False, env=None, now=None, ledger_dir=None,
     try:
         # Prepare the report destination before sending any request.
         exclusive_json(output, report)
+        previous_commenters = []
         for row in rows:
+            row = {**row, 'previous_commenters': previous_commenters}
             entry = dict(id=row['id'], url=row['url'], source=row['source'],
                          original_title=row['title'], published_on=row['published_on'], status='pending')
             report['results'].append(entry)
@@ -317,7 +323,8 @@ def run_trial(data, output, *, live=False, env=None, now=None, ledger_dir=None,
                 persist(ledger)
             try:
                 value = provider(model, env['GEMINI_API_KEY'], row)
-                entry['card'] = validate_result(value, article=row)
+                entry['card'] = validate_result(value, article=row, fixed_cast=True)
+                previous_commenters = sorted({c['name'] for c in entry['card']['comments']})
                 entry['status'] = 'accepted'
             except Rejected as error:
                 # Only controlled codes, never exception response text.
@@ -352,6 +359,7 @@ REASONS = {'invalid_text', 'invalid_language', 'result_schema', 'insufficient_ev
 REASONS.update({'article_kind', 'comment_kind', 'grounding_schema', 'grounding_quote',
                 'grounding_missing', 'grounding_reference_schema', 'grounding_reference',
                 'unsupported_announcement', 'unsupported_detail'})
+REASONS.update({'comment_speaker', 'comment_cast_count', 'comment_cast_repeated'})
 
 
 def main():

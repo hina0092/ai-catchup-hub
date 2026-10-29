@@ -3,6 +3,7 @@ import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import AskAiDialog from '../components/AskAiDialog.vue'
 import ArticleActionIcon from '../components/ArticleActionIcon.vue'
 import StoryDiagram from '../components/StoryDiagram.vue'
+import CommentAvatar from '../components/CommentAvatar.vue'
 
 const props = defineProps({
   stories: { type: Array, required: true },
@@ -28,10 +29,6 @@ const expandedComments = ref(new Set())
 const asking = ref(null), askContext = ref(''), askReturnFocus = ref(null)
 const notice = ref('')
 function sourceDomain(url) { return new URL(url).hostname }
-function commentAvatar(story, name) {
-  const names = [...new Set(story.comments.map(comment => comment[0]))]
-  return ['🐈', '🌿', '🍊', '🪐'][names.indexOf(name) % 4]
-}
 function replyLabel(story, parent) {
   return Number.isInteger(parent) && story.comments[parent] ? `${story.comments[parent][0]}へ` : '返信'
 }
@@ -161,8 +158,8 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
       </a>
       <section v-if="!expandedComments.has(story.id)" class="comment-preview" :aria-label="`${story.category}の架空コメントの抜粋`">
         <div class="comment-preview-heading"><strong>💬 ちょっと気になる会話</strong><span>AIの架空コメント</span></div>
-        <p class="teaser"><span class="comment-avatar" aria-hidden="true">{{ commentAvatar(story, story.comments[0][0]) }}</span><span>{{ story.teaser }}</span></p>
-        <p class="second-teaser"><span class="comment-avatar" aria-hidden="true">{{ commentAvatar(story, story.comments[story.id === 'sonnet' ? 3 : 1][0]) }}</span><span>↳ {{ story.comments[story.id === 'sonnet' ? 3 : 1][1] }}</span></p>
+        <p class="teaser"><CommentAvatar :name="story.comments[0][0]" /><span>{{ story.teaser }}</span></p>
+        <p class="second-teaser"><CommentAvatar :name="story.comments[story.id === 'sonnet' ? 3 : 1][0]" /><span>↳ {{ story.comments[story.id === 'sonnet' ? 3 : 1][1] }}</span></p>
       </section>
       <div class="actions">
         <button :id="'comments-toggle-' + story.id" class="read-comments" :aria-expanded="expandedComments.has(story.id)" :aria-controls="'comments-' + story.id" @click="toggleComments(story)"><ArticleActionIcon name="conversation" /><span class="action-label">{{ expandedComments.has(story.id) ? '閉じる' : '会話を読む' }}</span><span class="action-count">{{ story.comments.length }}</span></button>
@@ -173,7 +170,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
         <p class="fiction-notice">AIによる架空の会話 · 全{{ story.comments.length }}件<br>実在の投稿・利用者の声ではありません。</p>
         <ol class="comments">
           <li v-for="([name, text, reply, parent], commentIndex) in story.comments" :key="commentIndex" :class="{ reply }">
-            <span class="comment-avatar" aria-hidden="true">{{ commentAvatar(story, name) }}</span>
+            <CommentAvatar :name="name" />
             <div class="comment-body"><span class="comment-name">{{ name }}</span><span v-if="reply" class="reply-marker"> ↳ {{ replyLabel(story, parent) }}</span><p>{{ text }}</p></div>
           </li>
         </ol>

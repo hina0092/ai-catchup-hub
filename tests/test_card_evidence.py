@@ -122,8 +122,12 @@ class EvidenceTests(TestCase):
 
     def test_real_adapter_with_mock_transport_preserves_budget_logs_and_public_privacy(self):
         invalid = wire_result(); invalid['grounding'][0]['evidence_id'] = 999999
+        different_cast = wire_result()
+        for comment in different_cast['comments']:
+            if comment['name'] == 'なると':
+                comment['name'] = 'パキちゃん'
         with TemporaryDirectory() as directory, patch('collector.card_trial.build_opener') as opener:
-            opener.return_value.open.side_effect = [response(invalid), response(wire_result()), response(wire_result())]
+            opener.return_value.open.side_effect = [response(invalid), response(wire_result()), response(different_cast)]
             persisted = Mock()
             with self.assertLogs('collector.daily_cards', level='WARNING') as logs:
                 feed = generate([row(i) for i in range(5)], empty_feed(), Path(directory), CONFIG, ENV,

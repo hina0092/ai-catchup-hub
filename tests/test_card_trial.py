@@ -17,11 +17,14 @@ ENV = dict(ENABLE_GEMINI='true', GEMINI_BILLING_DISABLED='true',
 
 
 def result(article=None):
+    names = ['ねこ背', '積読ペンギン', '名無し', 'なると']
+    if article and set(article.get('previous_commenters', [])) == set(names):
+        names[-1] = 'パキちゃん'
     card = dict(sufficient=True, title='入力からニュースを理解する', lead='短い説明です。',
                 changed='何が変わったかを説明します。', example='例えば身近な作業への提案です。',
                 caution='実際の効果は未確認です。', diagram=dict(layout='steps', question='何が起きる？',
                 nodes=['入力を渡す', '結果を確認'], result='仕組みが分かる'),
-                comments=[dict(name=f'人物{i}', text=f'論点{i}について確認したい。', reply_to=None if i % 2 == 0 else i - 1)
+                comments=[dict(name=names[i % 4], text=f'論点{i}について確認したい。', reply_to=None if i % 2 == 0 else i - 1)
                           for i in range(8)])
     if article is not None:
         quote = article['source_text'][:40]
