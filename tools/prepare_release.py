@@ -5,6 +5,11 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
+    'collector/commenters.py', 'frontend/src/commenters.json',
+    'frontend/src/components/CommentAvatar.vue', 'tests/test_commenters.py',
+    'frontend/tests/commenters.test.mjs',
+    *(f'frontend/src/assets/commenters/{name}.webp' for name in
+      ('nekoze', 'penguin', 'yamada', 'nanashi', 'naruto', 'dopagaki', 'paki', 'bugtaro')),
     'frontend/src/components/ArticleActionIcon.vue',
     'frontend/src/articleQuestion.js', 'frontend/src/components/AskAiDialog.vue',
     'frontend/tests/article-question.test.mjs',

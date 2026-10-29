@@ -183,6 +183,12 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
                        published_on=row['_date'].astimezone(JST).date().isoformat(),
                        article_kind=hint, source_text=excerpt.strip(), unsupported_terms=unsupported,
                        source_basis='article_excerpt')
+        if output['entries']:
+            previous = max(output['entries'], key=lambda entry: entry['generated_at'])
+            # Newly appended cards win ties within the same generation run.
+            previous = next(entry for entry in reversed(output['entries'])
+                            if entry['generated_at'] == previous['generated_at'])
+            article['previous_commenters'] = sorted({c['name'] for c in previous['card']['comments']})
         fingerprint = hashlib.sha256(json.dumps(article, sort_keys=True).encode()).hexdigest()
         exclusive_json(ledger / f'{today}-{ident}-{fingerprint[:12]}.json',
                        dict(id=ident, fingerprint=fingerprint, version=2))
@@ -195,7 +201,7 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
             raw = provider(MODEL, env['GEMINI_API_KEY'], article)
             phase = 'validation'
             expected = hint if hint != 'auto' else raw.get('article_kind') if isinstance(raw, dict) else None
-            result = validate_result(raw, {**article, 'article_kind': expected})
+            result = validate_result(raw, {**article, 'article_kind': expected}, fixed_cast=True)
             # Do not publish input excerpts or the private grounding quote list.
             card = {k: result[k] for k in (*TEXT_LIMITS, 'diagram', 'comments')}
             output['entries'].append(dict(id=ident, url=row['url'], source=row['source'],
