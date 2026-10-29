@@ -131,6 +131,36 @@ class CardTrialTests(TestCase):
         good = result(); good.update(diagram=None, changed='更新。')
         self.assertEqual(validate_result(good)['changed'], '更新。')
 
+    def test_text_rejections_identify_only_fixed_output_fields(self):
+        fields = ['title', 'lead', 'changed', 'example', 'caution',
+                  'diagram.question', 'diagram.result', 'diagram.nodes.0', 'diagram.nodes.1',
+                  *(f'comments.{i}.text' for i in range(8))]
+        for field in fields:
+            card = result()
+            target = card
+            parts = field.split('.')
+            for key in parts[:-1]:
+                target = target[int(key)] if isinstance(target, list) else target[key]
+            key = int(parts[-1]) if isinstance(target, list) else parts[-1]
+            for content, reason in [('API', 'invalid_language'), ('<秘密>', 'invalid_text')]:
+                target[key] = content
+                with self.subTest(field=field, reason=reason), self.assertRaises(Rejected) as caught:
+                    validate_result(card)
+                self.assertEqual(str(caught.exception), reason)
+                self.assertEqual(caught.exception.field, field)
+            target[key] = 'APIが結果を返す'
+            validate_result(card)
+        card = result()
+        card['comments'][0]['name'] = 'API'
+        validate_result(card)  # Anonymous names retain their existing language rule.
+
+    def test_rejection_discards_untrusted_field_values(self):
+        for field in ['PRIVATE\n::warning::injected', 'diagram.nodes.99', [], {'title': 'secret'}]:
+            with self.subTest(field=field):
+                error = Rejected('invalid_language', field=field)
+                self.assertIsNone(error.field)
+                self.assertEqual(str(error), 'invalid_language')
+
     def test_transport_incomplete_and_oversized_rejected_without_payload_leaks(self):
         for data in [b'x' * 1_000_001, json.dumps({'candidates': [{'finishReason': 'MAX_TOKENS'}]}).encode(), b'SECRET']:
             response = Mock(); response.__enter__ = Mock(return_value=response); response.__exit__ = Mock(return_value=False)

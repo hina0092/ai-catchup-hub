@@ -27,19 +27,26 @@ MODEL = 'gemini-3.5-flash-lite'
 JST = timezone(timedelta(hours=9))
 JP = re.compile(r'[\u3040-\u30ff\u3400-\u9fff]')
 TEXT_LIMITS = dict(title=90, lead=120, changed=220, example=220, caution=220)
+TEXT_FIELDS = frozenset((*TEXT_LIMITS, 'diagram.question', 'diagram.result',
+    *(f'diagram.nodes.{i}' for i in range(4)),
+    *(f'comments.{i}.{key}' for i in range(8) for key in ('name', 'text'))))
 
 
 class Rejected(ValueError):
     """Fixed, non-sensitive diagnostic codes only."""
 
+    def __init__(self, reason, *, field=None):
+        super().__init__(reason)
+        self.field = field if isinstance(field, str) and field in TEXT_FIELDS else None
 
-def text(value, maximum, japanese=True):
+
+def text(value, maximum, japanese=True, *, field=None):
     if not isinstance(value, str) or not value.strip() or len(value.strip()) > maximum:
-        raise Rejected('invalid_text')
+        raise Rejected('invalid_text', field=field)
     if any(c in value for c in '<>') or re.search(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', value):
-        raise Rejected('invalid_text')
+        raise Rejected('invalid_text', field=field)
     if japanese and not JP.search(value):
-        raise Rejected('invalid_language')
+        raise Rejected('invalid_language', field=field)
     return value.strip()
 
 
@@ -96,7 +103,7 @@ def validate_result(value, article=None):
         raise Rejected('result_schema')
     if article is not None and not has_grounding:
         raise Rejected('grounding_missing')
-    result = {key: text(value.get(key), limit) for key, limit in TEXT_LIMITS.items()}
+    result = {key: text(value.get(key), limit, field=key) for key, limit in TEXT_LIMITS.items()}
     diagram = value.get('diagram')
     if diagram is not None:
         if not isinstance(diagram, dict) or set(diagram) != {'layout', 'question', 'nodes', 'result'}:
@@ -106,8 +113,10 @@ def validate_result(value, article=None):
         nodes = diagram['nodes']
         if not isinstance(nodes, list) or not 2 <= len(nodes) <= 4:
             raise Rejected('diagram_count')
-        diagram = dict(layout=diagram['layout'], question=text(diagram['question'], 70),
-                       nodes=[text(node, 35) for node in nodes], result=text(diagram['result'], 70))
+        diagram = dict(layout=diagram['layout'],
+                       question=text(diagram['question'], 70, field='diagram.question'),
+                       nodes=[text(node, 35, field=f'diagram.nodes.{i}') for i, node in enumerate(nodes)],
+                       result=text(diagram['result'], 70, field='diagram.result'))
         if diagram['layout'] == 'compare' and len(nodes) != 2:
             raise Rejected('diagram_count')
         if article is not None and (len(set(diagram['nodes'])) != len(nodes)
@@ -123,11 +132,12 @@ def validate_result(value, article=None):
         parent = comment['reply_to']
         if parent is not None and (type(parent) is not int or not 0 <= parent < index):
             raise Rejected('comment_parent')
-        body = text(comment['text'], 100)
+        body = text(comment['text'], 100, field=f'comments.{index}.text')
         if body in seen:
             raise Rejected('comment_duplicate')
         seen.add(body)
-        clean.append(dict(name=text(comment['name'], 18, False), text=body, reply_to=parent))
+        clean.append(dict(name=text(comment['name'], 18, False, field=f'comments.{index}.name'),
+                          text=body, reply_to=parent))
     if has_grounding:
         validate_grounding(value, article, Rejected)
     return {**result, 'diagram': diagram, 'comments': clean,
@@ -135,7 +145,7 @@ def validate_result(value, article=None):
 
 
 def string_schema(maximum):
-    return {'type': 'string', 'description': f'日本語で簡潔に。空文字不可、{maximum}文字以内。水増し不要。'}
+    return {'type': 'string', 'description': f'日本語で簡潔に。各欄にひらがな・カタカナ・漢字のいずれかを含める。英語の製品名だけにしない。空文字不可、{maximum}文字以内。水増し不要。'}
 
 
 SCHEMA = {
@@ -166,6 +176,8 @@ PROMPT = '''日本語で技術ニュースを楽しく説明する編集者で�
 入力だけを根拠にする。新機能、料金、性能、比較、利用条件を知識で補わない。
 根拠不足ならsufficient=false。記事で未確認の点を勝手に確認済みにしない。
 titleは製品名と意味を保った具体的な見出し。leadは短い概要。
+title/lead/changed/example/caution、図のquestion・各node・result、各コメント本文は、それぞれ日本語の文字を含む説明にする。
+英語の製品名・略語は保持してよいが、それだけで欄を埋めない。例えば図のnodeは「API」だけでなく、根拠に沿って「APIが結果を返す」のように役割を書く。
 changedは新発表・使い方ガイド・個人の実践記を区別して説明。
 exampleは身近な例。記事の実例か、応用のアイデアか分かるように書く。
 cautionは入力にある条件や未確認事項を簡潔に説明。水増ししない。
@@ -201,6 +213,8 @@ diagram=nullならdiagramの根拠は付けない。
 根拠候補にない内容を補わず、必要な根拠が見つからなければsufficient=falseにする。
 提案のexampleも着想の根拠を付け、提案であることを本文に明記する。
 入力を引用できても内容が正しいとは限らないので、抜粋が本当に断言を支えるか見直す。
+出力直前に、各説明欄に日本語があるか、各文字数上限内か、必要な根拠番号が入力候補に存在するかを見直す。
+修正は入力の根拠の範囲内に限り、情報を足して条件を埋めない。根拠不足ならsufficient=false。
 JSONだけを返す。形式検証を通すために情報を創作しない。'''
 
 
