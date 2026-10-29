@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from urllib.error import HTTPError
 
 from collector.card_trial import ROOT, Rejected, exclusive_json
@@ -141,6 +141,52 @@ class DailyCardsTests(TestCase):
         with self.assertNoLogs('collector.daily_cards', level='WARNING'):
             feed = self.generate(rows=[row()])
         self.assertEqual(feed['status'], 'ready')
+
+    def test_language_field_is_logged_without_content_and_next_cards_are_kept(self):
+        calls = []
+        def send(*args):
+            card = provider(*args)
+            if not calls:
+                card['diagram']['nodes'][1] = 'PRIVATE_SOURCE_AND_API_KEY'
+            calls.append(True)
+            return card
+        with self.assertLogs('collector.daily_cards', level='WARNING') as logs:
+            feed = self.generate(provider=send)
+        self.assertEqual([json.loads(r.getMessage()) for r in logs.records], [dict(
+            event='daily_card_rejected', attempt=1, phase='validation',
+            reason='invalid_language', field='diagram.nodes.1')])
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(len(list(self.ledger.glob('*.json'))), 3)
+        self.assertEqual(feed['status'], 'ready')
+        self.assertEqual(len(feed['entries']), 2)
+        self.assertNotIn('PRIVATE_SOURCE_AND_API_KEY', str(logs.output) + json.dumps(feed))
+        self.assertNotIn('diagnostics', feed)
+
+    def test_response_field_metadata_is_never_logged_even_if_modified(self):
+        errors = [Rejected('invalid_language', field='title'),
+                  Rejected('invalid_text'), Rejected('PRIVATE_KEY')]
+        errors[1].field = 'PRIVATE_KEY\n::warning::injected'
+        errors[2].field = ['PRIVATE_KEY']
+        with self.assertLogs('collector.daily_cards', level='WARNING') as logs:
+            self.generate(provider=Mock(side_effect=errors))
+        records = [json.loads(r.getMessage()) for r in logs.records]
+        self.assertTrue(all('field' not in r for r in records))
+        self.assertNotIn('PRIVATE_KEY', str(logs.output))
+        self.assertNotIn('::warning::', str(logs.output))
+
+    def test_validation_log_rechecks_allowlist_for_modified_field_metadata(self):
+        errors = [Rejected('invalid_language'), Rejected('invalid_text'), Rejected('PRIVATE_KEY')]
+        for error, field in zip(errors, ['PRIVATE_KEY\n::warning::injected', ['PRIVATE_KEY'], 'title']):
+            error.field = field
+        with patch('collector.daily_cards.validate_result', side_effect=errors):
+            with self.assertLogs('collector.daily_cards', level='WARNING') as logs:
+                feed = self.generate()
+        records = [json.loads(r.getMessage()) for r in logs.records]
+        self.assertTrue(all(r['phase'] == 'validation' and 'field' not in r for r in records))
+        self.assertEqual(records[-1]['reason'], 'invalid_result')
+        self.assertEqual(feed['entries'], [])
+        self.assertNotIn('PRIVATE_KEY', str(logs.output))
+        self.assertNotIn('::warning::', str(logs.output))
 
     def test_429_stops_without_retry_and_persists_stop_marker(self):
         send = Mock(side_effect=HTTPError('https://example.com', 429, 'limit', {}, None))

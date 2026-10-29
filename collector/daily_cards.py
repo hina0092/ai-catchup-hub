@@ -15,7 +15,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlsplit
 
 from collector.article_source import article_text
-from collector.card_trial import (JST, MODEL, PROMPT, KINDS, REASONS, Rejected, TEXT_LIMITS,
+from collector.card_trial import (JST, MODEL, PROMPT, KINDS, REASONS, Rejected, TEXT_LIMITS, TEXT_FIELDS,
                                   exclusive_json, request_card, validate_result)
 from collector.gemini import live_allowed
 
@@ -207,8 +207,12 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
             # Public Actions logs: allowlisted codes only, never exception text,
             # URLs, source excerpts, raw model output, keys or tracebacks.
             reason = str(error) if str(error) in REASONS else 'invalid_result'
-            LOGGER.warning(json.dumps(dict(event='daily_card_rejected',
-                attempt=attempts, phase=phase, reason=reason), sort_keys=True))
+            diagnostic = dict(event='daily_card_rejected', attempt=attempts, phase=phase, reason=reason)
+            field = getattr(error, 'field', None)
+            if (phase == 'validation' and reason in ('invalid_text', 'invalid_language')
+                    and isinstance(field, str) and field in TEXT_FIELDS):
+                diagnostic['field'] = field
+            LOGGER.warning(json.dumps(diagnostic, sort_keys=True))
         except HTTPError as error:
             output['status'] = 'rate_limit' if error.code == 429 else 'provider_error'
             if error.code == 429:
