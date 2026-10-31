@@ -1,5 +1,6 @@
 <script setup>
 import commenters from '../commenters.json'
+import ArticleActionIcon from './ArticleActionIcon.vue'
 
 const props = defineProps({ name: { type: String, required: true } })
 const avatars = import.meta.glob('../assets/commenters/*.webp', { eager: true, query: '?url', import: 'default' })
@@ -10,5 +11,5 @@ function avatarFor(name) {
 </script>
 
 <template>
-  <span class="comment-avatar" aria-hidden="true"><img v-if="avatarFor(props.name)" :src="avatarFor(props.name)" alt="" width="30" height="30" decoding="async"><span v-else>👤</span></span>
+  <span class="comment-avatar" aria-hidden="true"><img v-if="avatarFor(props.name)" :src="avatarFor(props.name)" alt="" width="30" height="30" decoding="async"><ArticleActionIcon v-else name="user" /></span>
 </template>
