@@ -20,7 +20,7 @@ from collector.article_source import NoRedirect
 from collector.gemini import live_allowed
 from collector.card_grounding import KINDS, META, GROUNDING_SCHEMA, validate_grounding
 from collector.card_evidence import evidence_candidates, evidence_schema, restore_grounding
-from collector.commenters import NAMES, cast_prompt, validate_cast
+from collector.commenters import NAMES, cast_prompt, select_cast, validate_cast
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = 2
@@ -140,7 +140,8 @@ def validate_result(value, article=None, *, fixed_cast=False):
         clean.append(dict(name=text(comment['name'], 18, False, field=f'comments.{index}.name'),
                           text=body, reply_to=parent))
     if fixed_cast:
-        validate_cast(clean, Rejected, (article or {}).get('previous_commenters', ()))
+        validate_cast(clean, Rejected, (article or {}).get('previous_commenters', ()),
+                      select_cast(article) if article is not None else None)
     if has_grounding:
         validate_grounding(value, article, Rejected)
     return {**result, 'diagram': diagram, 'comments': clean,
@@ -219,21 +220,26 @@ diagram=nullならdiagramの根拠は付けない。
 出力直前に、各説明欄に日本語があるか、各文字数上限内か、必要な根拠番号が入力候補に存在するかを見直す。
 修正は入力の根拠の範囲内に限り、情報を足して条件を埋めない。根拠不足ならsufficient=false。
 JSONだけを返す。形式検証を通すために情報を創作しない。'''
-PROMPT += '\n' + cast_prompt()
+PROMPT += '\n今回の参加者はselected_commentersにプログラムが指定する。指定された人物以外を登場させない。'
 
 
 def request_card(model, key, article, *, prompt=PROMPT):
     if model != MODEL:
         raise Rejected('model_not_allowed')
     pool = evidence_candidates(article)
+    selected = select_cast(article)
     # The candidates already contain the original text. Avoid sending it twice.
-    wire_article = {k: v for k, v in article.items() if k != 'source_text'}
+    wire_article = {k: v for k, v in article.items()
+                    if k not in ('source_text', 'previous_commenters', 'selected_commenters')}
     wire_article['evidence_candidates'] = pool
+    wire_article['selected_commenters'] = [person['name'] for person in selected]
+    schema = evidence_schema(SCHEMA, pool)
+    schema['properties']['comments']['items']['properties']['name']['enum'] = wire_article['selected_commenters']
     payload = {
-        'systemInstruction': {'parts': [{'text': prompt}]},
+        'systemInstruction': {'parts': [{'text': prompt + '\n' + cast_prompt(selected)}]},
         'contents': [{'role': 'user', 'parts': [{'text': json.dumps(wire_article, ensure_ascii=False)}]}],
         'generationConfig': {'maxOutputTokens': 6144, 'responseMimeType': 'application/json',
-                             'responseJsonSchema': evidence_schema(SCHEMA, pool)},
+                             'responseJsonSchema': schema},
     }
     req = Request(f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
                   data=json.dumps(payload, ensure_ascii=False).encode(),
