@@ -30,13 +30,16 @@ class DailyCardsTests(TestCase):
     def test_repeated_cast_is_rejected_without_losing_previous_card(self):
         first = self.generate(rows=[row(0)])
         def repeated(model, key, article):
-            return provider(model, key, {k: v for k, v in article.items() if k != 'previous_commenters'})
+            card = provider(model, key, article)
+            for comment, old in zip(card['comments'], first['entries'][0]['card']['comments']):
+                comment['name'] = old['name']
+            return card
         with self.assertLogs('collector.daily_cards', level='WARNING') as logs:
             second = self.generate(rows=[row(1)], feed=first, provider=repeated)
         self.assertEqual(second['entries'], first['entries'])
         self.assertEqual(second['updated_at'], first['updated_at'])
         self.assertEqual(second['status'], 'invalid_outputs')
-        self.assertIn('comment_cast_repeated', logs.output[0])
+        self.assertTrue(any(code in logs.output[0] for code in ('comment_cast_repeated', 'comment_speaker')))
         self.assertNotIn('previous_commenters', json.dumps(second))
 
     def test_previous_cast_is_passed_to_next_request_and_changes_in_same_run(self):

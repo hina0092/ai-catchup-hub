@@ -121,13 +121,19 @@ class EvidenceTests(TestCase):
                 request_card(MODEL, 'PRIVATE_KEY', ARTICLE)
 
     def test_real_adapter_with_mock_transport_preserves_budget_logs_and_public_privacy(self):
-        invalid = wire_result(); invalid['grounding'][0]['evidence_id'] = 999999
-        different_cast = wire_result()
-        for comment in different_cast['comments']:
-            if comment['name'] == 'なると':
-                comment['name'] = 'パキちゃん'
+        calls = []
+        def send(request, **kwargs):
+            wire = json.loads(json.loads(request.data)['contents'][0]['parts'][0]['text'])
+            value = wire_result()
+            names = wire['selected_commenters']
+            for index, comment in enumerate(value['comments']):
+                comment['name'] = names[index % len(names)]
+            if not calls:
+                value['grounding'][0]['evidence_id'] = 999999
+            calls.append(names)
+            return response(value)
         with TemporaryDirectory() as directory, patch('collector.card_trial.build_opener') as opener:
-            opener.return_value.open.side_effect = [response(invalid), response(wire_result()), response(different_cast)]
+            opener.return_value.open.side_effect = send
             persisted = Mock()
             with self.assertLogs('collector.daily_cards', level='WARNING') as logs:
                 feed = generate([row(i) for i in range(5)], empty_feed(), Path(directory), CONFIG, ENV,
