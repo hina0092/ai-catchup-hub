@@ -53,5 +53,6 @@ test('old speakers retain their names and text with a neutral avatar in saved ar
   assert.match(html, /昔の常連/)
   const avatar = await renderToString(createSSRApp(Avatar, { name: '昔の常連' }))
   assert.doesNotMatch(avatar, /<img/)
-  assert.match(avatar, /👤/)
+  assert.match(avatar, /<svg/)
+  assert.doesNotMatch(avatar, /👤/)
 })

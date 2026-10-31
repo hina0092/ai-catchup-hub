@@ -19,6 +19,8 @@ test('steps preserve their order and separate the output from the use case', asy
   assert.ok(html.indexOf('利用者：') < html.indexOf('Polly：'))
   assert.match(html, /読み上げ音声が得られる/)
   assert.doesNotMatch(html, /動画や案内|ひと目でわかる/)
+  assert.doesNotMatch(html, /📝|🎙/)
+  assert.match(story.inputs[0], /📝/)
 })
 
 test('comparison uses two labeled targets without causal arrows and survives saving', async () => {
@@ -30,6 +32,16 @@ test('comparison uses two labeled targets without causal arrows and survives sav
   assert.doesNotMatch(html, /diagram-join|diagram-steps|↓/)
   assert.equal(readerSnapshot(story).layout, 'compare')
   assert.throws(() => readerSnapshot({ ...story, inputs:[...story.inputs, '追加'] }))
+})
+
+test('only short sequences can use a horizontal layout and all steps keep their order', async () => {
+  for (const length of [2, 3, 4]) {
+    const story = { ...trialStories[0], layout: 'steps', inputs: Array.from({ length }, (_, i) => `手順${i + 1}`) }
+    const html = await render(story)
+    assert.equal(html.includes('short-steps'), length <= 3)
+    assert.equal((html.match(/<li\b/g) || []).length, length)
+    for (let i = 1; i < length; i++) assert.ok(html.indexOf(`手順${i}`) < html.indexOf(`手順${i + 1}`))
+  }
 })
 
 test('combine labels the relationship and a null diagram stays hidden', async () => {

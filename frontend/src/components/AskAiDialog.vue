@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { buildArticleQuestion, questionIntents, copyArticleQuestion } from '../articleQuestion.js'
+import ArticleActionIcon from './ArticleActionIcon.vue'
+import { readerLabel } from '../readerIcons.js'
 
 const props = defineProps({
   story:{type:Object,required:true},
@@ -53,14 +55,14 @@ onUnmounted(() => {
 <template>
   <dialog ref="dialog" class="comments-dialog ask-dialog" aria-labelledby="ask-heading" aria-describedby="ask-intro" @close="afterClose" @click="event => { if (event.target === dialog) close() }">
     <div class="sheet-header">
-      <div><p>TAKE YOUR CURIOSITY FURTHER</p><h2 id="ask-heading" ref="heading" tabindex="-1">💬 AIに聞いてみる</h2></div>
+      <div><p>TAKE YOUR CURIOSITY FURTHER</p><h2 id="ask-heading" ref="heading" tabindex="-1" class="icon-label"><ArticleActionIcon name="ai" />AIに聞いてみる</h2></div>
       <button class="close" aria-label="AI相談を閉じる" @click="close">✕</button>
     </div>
     <div class="sheet-scroll ask-scroll">
       <p class="ask-article">{{ story.title.replaceAll('\n','') }}</p>
       <p id="ask-intro" class="ask-intro">相談文をコピーして、いつものAIに貼り付けます。回答はそのAIで読めます。</p>
       <div class="ask-intents" role="group" aria-label="聞きたいことの種類">
-        <button v-for="item in questionIntents" :key="item.id" :aria-pressed="intent === item.id" @click="intent = item.id">{{ item.label }}</button>
+        <button v-for="item in questionIntents" :key="item.id" :aria-pressed="intent === item.id" @click="intent = item.id">{{ readerLabel(item.label) }}</button>
       </div>
       <label class="ask-field"><span>聞きたいこと <small>任意</small></span>
         <textarea v-model="question" maxlength="600" rows="2" placeholder="例：今までの仕組みと何が違うの？"></textarea>
@@ -79,7 +81,7 @@ onUnmounted(() => {
       </div>
     </div>
     <div class="sheet-footer ask-footer">
-      <button class="copy-question" :disabled="busy" @click="copy">{{ busy ? 'コピー中…' : copied ? '✓ 相談文をコピーしました' : '📋 相談文をコピー' }}</button>
+      <button class="copy-question icon-label" :disabled="busy" @click="copy"><ArticleActionIcon name="copy" />{{ busy ? 'コピー中…' : copied ? '✓ 相談文をコピーしました' : '相談文をコピー' }}</button>
       <p v-if="copied" class="ask-success" role="status">いつものAIに貼り付けて、送信してください。</p>
       <p v-else class="ask-copy-help">① コピー → ② いつものAIに貼り付けて送信</p>
       <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" class="open-ai">ChatGPTを開く ↗</a>
@@ -92,4 +94,9 @@ onUnmounted(() => {
 .ask-field{display:grid;gap:7px;margin:0 0 14px}.ask-field>span{font-size:12px;font-weight:700}.ask-field small{font-size:11px;font-weight:400;color:#737373;margin-left:5px}.ask-dialog textarea{width:100%;max-width:100%;box-sizing:border-box;border:1px solid #dedede;border-radius:10px;padding:10px 12px;font:inherit;font-size:16px;line-height:1.8;color:#242424;background:#ffffff;resize:vertical;min-height:72px}.ask-dialog textarea:focus-visible{outline:2px solid #666666;outline-offset:2px}.ask-note{font-size:11px;color:#737373;line-height:1.8;margin:4px 0 12px}
 .ask-preview summary{font-size:11px;color:#606060;cursor:pointer;padding:10px 0}.ask-preview textarea,.ask-fallback textarea{font-size:11px;background:#f6f6f6}.ask-fallback p{font-size:11px;line-height:1.8;color:#87642e;background:#fff3df;padding:10px;border-radius:9px}.ask-footer{display:grid;justify-items:center;gap:5px;padding:13px 18px}.copy-question{width:100%;border-radius:12px;padding:12px;background:#242424;color:#ffffff;font-size:13px;font-weight:700}.copy-question:disabled{opacity:.65;cursor:wait}.ask-copy-help,.ask-success{font-size:11px;margin:3px 0;color:#606060;line-height:1.7}.ask-success{color:#242424}.open-ai{font-size:12px;min-height:36px;display:flex;align-items:center;color:#242424}.ask-other{font-size:11px;color:#737373}
 @media(max-width:360px){.ask-intents button{font-size:11px;padding:7px 9px}.ask-footer{padding:10px 14px}}
+.ask-intents button[aria-pressed=true],.copy-question{background:linear-gradient(#d0fff1,#a3ecdc);border:1px solid #83cdbf;color:#21483f}
+.ask-dialog textarea:focus-visible{outline:3px solid #176b88;outline-offset:2px}
+.ask-dialog textarea{border-color:#b7d6e2}
+.copy-question:hover{box-shadow:0 0 12px #12bfa04d}
+@media(prefers-reduced-motion:reduce){.copy-question{transition:none}}
 </style>
