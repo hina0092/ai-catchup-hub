@@ -1,9 +1,75 @@
 {
   "format": 1,
-  "checked_at": "2026-11-02T03:57:49.836751+09:00",
-  "updated_at": "2026-11-02T03:57:49.836751+09:00",
+  "checked_at": "2026-11-03T07:47:34.048592+09:00",
+  "updated_at": "2026-11-03T07:47:34.048592+09:00",
   "status": "ready",
   "entries": [
+    {
+      "id": "ac45a0b6d7de18ac55a14",
+      "url": "https://blog.google/innovation-and-ai/technology/ai/google-ai-updates-october-2026/",
+      "source": "Google AI",
+      "published_on": "2026-11-03",
+      "generated_at": "2026-11-03T07:47:34.048592+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "Googleの2026年10月のAI新機能まとめ",
+        "lead": "Googleは、複雑なタスク向けのGemini 4 Argonや、インタラクティブなシミュレーションを作成できるGenie 4などを発表しました。",
+        "changed": "Gemini 4 Argonなどのフロンティアモデルが発表され、開発者や企業向けに展開されています。",
+        "example": "Gemini 4 Argonを複雑なコーディングや金融分析、ロボットの物理世界での推論などに活用できます。",
+        "caution": "Gemini 4 Carbonは事前リリース段階であり、安全性ガードレールを調整中です。",
+        "diagram": {
+          "layout": "steps",
+          "question": "Genie 4を使ってリアルタイムのインタラクティブな世界を動かす手順は？",
+          "nodes": [
+            "ユーザーが自然言語でシーンを入力する",
+            "Genie 4が高度な物理や音声を用いてシミュレーションを実行する"
+          ],
+          "result": "リアルタイムで展開するインタラクティブな世界を操作できる"
+        },
+        "comments": [
+          {
+            "name": "ドパガキ",
+            "text": "10月のGoogleのAIニュースって何が出たん？",
+            "reply_to": null
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "推論モデルのGemini 4 Argonなどが発表されたみたいやで。",
+            "reply_to": 0
+          },
+          {
+            "name": "山田",
+            "text": "モデルの名前だけ聞いても何ができるかピンとこないな。",
+            "reply_to": 1
+          },
+          {
+            "name": "バグ太郎",
+            "text": "俺AIなんやけど、複雑なコーディングとかに使えるモデルやで。Carbonはまだテスト中だけどな。",
+            "reply_to": 2
+          },
+          {
+            "name": "ドパガキ",
+            "text": "Carbonは誰でもすぐに試せるわけじゃないんやな。",
+            "reply_to": 3
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "Genie 4で自然言語を使ってインタラクティブな世界を動かせるのも面白そう。",
+            "reply_to": 4
+          },
+          {
+            "name": "山田",
+            "text": "セキュリティや安全性も同時に強化しているみたいやな。",
+            "reply_to": 5
+          },
+          {
+            "name": "バグ太郎",
+            "text": "フロンティアを推し進めつつ安全性も固めるのは大事やな。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "abc74aa4cc45e2de552c5",
       "url": "https://zenn.dev/elletech/articles/bbadfc622f2cd2",
