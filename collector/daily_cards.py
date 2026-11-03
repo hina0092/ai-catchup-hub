@@ -15,7 +15,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlsplit
 
 from collector.article_source import article_text
-from collector.card_trial import (JST, MODEL, PROMPT, KINDS, REASONS, Rejected, TEXT_LIMITS, TEXT_FIELDS,
+from collector.card_trial import (JST, MODEL, PROMPT, KINDS, REASONS, Rejected, TEXT_LIMITS, TEXT_FIELDS, TEXT_DETAILS,
                                   exclusive_json, request_card, validate_result)
 from collector.gemini import live_allowed
 
@@ -42,7 +42,8 @@ def configuration(value):
             or not isinstance(value.get('article_hosts'), list) or not value['article_hosts']
             or not set(value['article_hosts']).issubset(HOSTS)
             or not isinstance(value.get('source_names'), list) or not value['source_names']
-            or any(not isinstance(n, str) or not n for n in value['source_names'])):
+            or any(not isinstance(n, str) or not n for n in value['source_names'])
+            or value.get('generation_candidate', 'off') not in ('off', 'short_diagram_v1')):
         raise ValueError('daily configuration')
     return value
 
@@ -140,7 +141,11 @@ def candidates(rows, feed, config, now):
 
 
 def daily_provider(model, key, article):
-    return request_card(model, key, article, prompt=DAILY_PROMPT)
+    variant = article.get('_generation_variant', 'stable')
+    source = {k: v for k, v in article.items() if k != '_generation_variant'}
+    if variant == 'short_diagram_v1':
+        return request_card(model, key, source, prompt=DAILY_PROMPT, short_diagram=True)
+    return request_card(model, key, source, prompt=DAILY_PROMPT)
 
 
 def generate(rows, feed, ledger, config, env, persist, *, now=None,
@@ -196,9 +201,15 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
         if used:
             sleep(15)
         used += 1; attempts += 1
+        # Only the first durable reservation of the actual JST day can trial
+        # a candidate. Restarts and manual reservations consume that slot too.
+        variant = ('short_diagram_v1' if used == 1
+                   and config.get('generation_candidate', 'off') == 'short_diagram_v1' else 'stable')
+        LOGGER.info(json.dumps(dict(event='daily_card_generation', attempt=attempts,
+            slot=used, variant=variant), sort_keys=True))
         phase = 'response'
         try:
-            raw = provider(MODEL, env['GEMINI_API_KEY'], article)
+            raw = provider(MODEL, env['GEMINI_API_KEY'], {**article, '_generation_variant': variant})
             phase = 'validation'
             expected = hint if hint != 'auto' else raw.get('article_kind') if isinstance(raw, dict) else None
             result = validate_result(raw, {**article, 'article_kind': expected}, fixed_cast=True)
@@ -208,6 +219,8 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
                 published_on=article['published_on'], generated_at=now.isoformat(),
                 article_kind=result['article_kind'], card=card))
             successes += 1
+            LOGGER.info(json.dumps(dict(event='daily_card_accepted', attempt=attempts,
+                slot=used, variant=variant), sort_keys=True))
         except Rejected as error:
             output['status'] = 'invalid_outputs'
             # Public Actions logs: allowlisted codes only, never exception text,
@@ -218,6 +231,10 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
             if (phase == 'validation' and reason in ('invalid_text', 'invalid_language')
                     and isinstance(field, str) and field in TEXT_FIELDS):
                 diagnostic['field'] = field
+                detail = getattr(error, 'detail', None)
+                if (reason == 'invalid_text' and isinstance(detail, str)
+                        and detail in TEXT_DETAILS):
+                    diagnostic['detail'] = detail
             LOGGER.warning(json.dumps(diagnostic, sort_keys=True))
         except HTTPError as error:
             output['status'] = 'rate_limit' if error.code == 429 else 'provider_error'

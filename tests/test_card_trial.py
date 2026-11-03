@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import datetime
+import hashlib
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -164,6 +165,65 @@ class CardTrialTests(TestCase):
                 error = Rejected('invalid_language', field=field)
                 self.assertIsNone(error.field)
                 self.assertEqual(str(error), 'invalid_language')
+
+    def test_diagram_text_details_preserve_known_failure_fields_and_limits(self):
+        # Synthetic output, not the unavailable rejected model text from 11/3.
+        for index in (2, 1):
+            for text, detail in [(None, 'type'), ([], 'type'), (' \n ', 'empty'),
+                                 ('あ' * 36, 'too_long'), ('日本語<補足>', 'forbidden_character'),
+                                 ('日本語\x01', 'forbidden_character')]:
+                card = result()
+                card['diagram']['nodes'] = ['入力を渡す', '処理を行う', '結果を確認']
+                card['diagram']['nodes'][index] = text
+                with self.subTest(index=index, detail=detail), self.assertRaises(Rejected) as caught:
+                    validate_result(card)
+                self.assertEqual(str(caught.exception), 'invalid_text')
+                self.assertEqual(caught.exception.field, f'diagram.nodes.{index}')
+                self.assertEqual(caught.exception.detail, detail)
+                self.assertNotIn('補足', str(caught.exception))
+        card = result()
+        card['diagram']['nodes'][1] = 'あ' * 35
+        validate_result(card)
+        card['diagram'] = None
+        validate_result(card)
+        self.assertIsNone(Rejected('invalid_text', detail='PRIVATE_KEY').detail)
+
+    def test_stable_schema_and_daily_prompt_match_successful_revision(self):
+        # Snapshot checked against 856764df (11/1--11/3 generation), not a live API call.
+        from collector.card_trial import SCHEMA
+        from collector.daily_cards import DAILY_PROMPT
+        fingerprint = hashlib.sha256(json.dumps(dict(schema=SCHEMA, prompt=DAILY_PROMPT),
+            sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        self.assertEqual(fingerprint, 'd9c8ea8bbea871e9b3c47eb0f6bf993a5ca2691426dcb345bc885724d514b558')
+
+    def test_short_diagram_request_is_isolated_and_does_not_retry_or_truncate(self):
+        from collector.card_trial import SCHEMA, SHORT_DIAGRAM_PROMPT
+        original = deepcopy(SCHEMA)
+        article = self.data['articles'][0]
+        value = result(article)
+        value['grounding'] = [dict(field=ref['field'], evidence_id=1) for ref in value['grounding']]
+        value['diagram']['nodes'][1] = 'あ' * 36
+        response = Mock(); response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=False)
+        response.read.return_value = json.dumps({'candidates': [{'finishReason': 'STOP',
+            'content': {'parts': [{'text': json.dumps(value)}]}}]}).encode()
+        with patch('collector.card_trial.build_opener') as opener:
+            opener.return_value.open.return_value = response
+            restored = request_card(MODEL, 'SECRET', article, short_diagram=True)
+            with self.assertRaises(Rejected) as caught:
+                validate_result(restored, article)
+            self.assertEqual(caught.exception.detail, 'too_long')
+            self.assertEqual(restored['diagram']['nodes'][1], 'あ' * 36)
+            self.assertEqual(opener.return_value.open.call_count, 1)
+            payload = json.loads(opener.return_value.open.call_args.args[0].data)
+        schema = payload['generationConfig']['responseJsonSchema']
+        self.assertIn('20字程度', schema['properties']['diagram']['properties']['nodes']['items']['description'])
+        self.assertNotIn('maxLength', json.dumps(schema))
+        self.assertIn(SHORT_DIAGRAM_PROMPT, payload['systemInstruction']['parts'][0]['text'])
+        self.assertEqual(SCHEMA, original)
+        value['diagram'] = None
+        value['grounding'] = [r for r in restored['grounding'] if r['field'] != 'diagram']
+        validate_result(value, article)
 
     def test_transport_incomplete_and_oversized_rejected_without_payload_leaks(self):
         for data in [b'x' * 1_000_001, json.dumps({'candidates': [{'finishReason': 'MAX_TOKENS'}]}).encode(), b'SECRET']:

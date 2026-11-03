@@ -31,21 +31,27 @@ TEXT_LIMITS = dict(title=90, lead=120, changed=220, example=220, caution=220)
 TEXT_FIELDS = frozenset((*TEXT_LIMITS, 'diagram.question', 'diagram.result',
     *(f'diagram.nodes.{i}' for i in range(4)),
     *(f'comments.{i}.{key}' for i in range(8) for key in ('name', 'text'))))
+TEXT_DETAILS = frozenset(('type', 'empty', 'too_long', 'forbidden_character'))
 
 
 class Rejected(ValueError):
     """Fixed, non-sensitive diagnostic codes only."""
 
-    def __init__(self, reason, *, field=None):
+    def __init__(self, reason, *, field=None, detail=None):
         super().__init__(reason)
         self.field = field if isinstance(field, str) and field in TEXT_FIELDS else None
+        self.detail = detail if isinstance(detail, str) and detail in TEXT_DETAILS else None
 
 
 def text(value, maximum, japanese=True, *, field=None):
-    if not isinstance(value, str) or not value.strip() or len(value.strip()) > maximum:
-        raise Rejected('invalid_text', field=field)
+    if not isinstance(value, str):
+        raise Rejected('invalid_text', field=field, detail='type')
+    if not value.strip():
+        raise Rejected('invalid_text', field=field, detail='empty')
+    if len(value.strip()) > maximum:
+        raise Rejected('invalid_text', field=field, detail='too_long')
     if any(c in value for c in '<>') or re.search(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', value):
-        raise Rejected('invalid_text', field=field)
+        raise Rejected('invalid_text', field=field, detail='forbidden_character')
     if japanese and not JP.search(value):
         raise Rejected('invalid_language', field=field)
     return value.strip()
@@ -223,7 +229,25 @@ JSONだけを返す。形式検証を通すために情報を創作しない。'
 PROMPT += '\n今回の参加者はselected_commentersにプログラムが指定する。指定された人物以外を登場させない。'
 
 
-def request_card(model, key, article, *, prompt=PROMPT):
+SHORT_DIAGRAM_PROMPT = '''図の各箱は20字程度を目安に、最大35字。質問と結果はそれぞれ最大70字。
+stepsは「主体＋動作」、combineは材料名、compareは比較対象と差を短く書く。長い補足はleadやchangedへ分け、その欄の上限も守る。
+矢印・HTML・比較記号の半角 < > は書かない。箱の接続や矢印は画面側で描く。
+文字数に収めるために正式名を誤記したり、意味・条件・主体を削ったりしない。
+根拠に沿う短い図を作れない場合はdiagram=nullとし、diagramの根拠は付けない。
+出力直前に図の各箱を個別に見直し、日本語・空欄・35字以内・禁止文字なしを確認する。'''
+
+
+def short_diagram_schema(schema):
+    # Gemini's responseJsonSchema does not enforce maxLength. Use supported
+    # descriptions; local validation remains the hard limit for both variants.
+    from copy import deepcopy
+    bounded = deepcopy(schema)
+    properties = bounded['properties']['diagram']['properties']
+    properties['nodes']['items']['description'] += ' 箱は20字程度を目安に最大35字。半角 < > や矢印は書かない。'
+    return bounded
+
+
+def request_card(model, key, article, *, prompt=PROMPT, short_diagram=False):
     if model != MODEL:
         raise Rejected('model_not_allowed')
     pool = evidence_candidates(article)
@@ -235,6 +259,9 @@ def request_card(model, key, article, *, prompt=PROMPT):
     wire_article['selected_commenters'] = [person['name'] for person in selected]
     schema = evidence_schema(SCHEMA, pool)
     schema['properties']['comments']['items']['properties']['name']['enum'] = wire_article['selected_commenters']
+    if short_diagram:
+        schema = short_diagram_schema(schema)
+        prompt += '\n' + SHORT_DIAGRAM_PROMPT
     payload = {
         'systemInstruction': {'parts': [{'text': prompt + '\n' + cast_prompt(selected)}]},
         'contents': [{'role': 'user', 'parts': [{'text': json.dumps(wire_article, ensure_ascii=False)}]}],

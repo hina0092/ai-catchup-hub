@@ -1,6 +1,7 @@
 {
   "enabled": true,
   "daily_requests": 3,
+  "generation_candidate": "short_diagram_v1",
   "retained_cards": 30,
   "max_age_days": 14,
   "article_hosts": ["zenn.dev", "github.blog", "aws.amazon.com", "openai.com", "blog.google", "www.anthropic.com"],
