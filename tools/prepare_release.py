@@ -6,11 +6,11 @@ from zipfile import ZipFile, ZIP_DEFLATED
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
     'frontend/src/components/TopicSticker.vue',
-    'frontend/public/brand/discover-folder.svg', 'frontend/public/brand/saved-floppy.svg',
+    'frontend/public/brand/discover-pc.svg', 'frontend/public/brand/saved-folder.svg',
     'frontend/src/readerIcons.js',
     'frontend/src/prototype/techmin.css', 'frontend/src/components/StoryDiagram.vue',
     'frontend/public/site.webmanifest',
-    'frontend/public/brand/mint-loppy.jpg',
+    'frontend/public/brand/mint-loppy-game.jpg',
     *(f'frontend/public/brand/icon-{size}.png' for size in (16, 32, 48, 180, 192, 512)),
     'collector/commenters.py', 'frontend/src/commenters.json',
     'frontend/src/components/CommentAvatar.vue', 'tests/test_commenters.py',

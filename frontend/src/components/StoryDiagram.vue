@@ -27,8 +27,8 @@ const conclusion = computed(() => layout.value === 'compare' ? '違いのポイ�
 </template>
 
 <style scoped>
-.story-diagram{background:linear-gradient(#d6edf333 1px,transparent 1px),linear-gradient(90deg,#d6edf333 1px,transparent 1px),#f7fcff;background-size:24px 24px;border:1px solid #8cbeca;color:#1d2228;border-radius:13px;padding:18px;box-shadow:3px 4px 0 #dcecf4;overflow:hidden}
-.story-diagram .visual-head{background:linear-gradient(110deg,#c7f7ee,#cceafa 65%,#e6e5ff);border-bottom:1px solid #9bcbd7;margin:-18px -18px 16px;padding:8px 14px;font-size:12px;font-weight:700;color:#2c5261}
+.story-diagram{background:linear-gradient(#d6edf333 1px,transparent 1px),linear-gradient(90deg,#d6edf333 1px,transparent 1px),#f7fcff;background-size:24px 24px;border:1px solid var(--window-line,#a8c5d6);color:#1d2228;border-radius:var(--window-radius,13px);padding:18px;box-shadow:var(--window-shadow,0 3px 0 #dcecf4);overflow:hidden}
+.story-diagram .visual-head{background:var(--window-bar,linear-gradient(110deg,#c7f7ee,#cceafa 65%,#e6e5ff));border-bottom:1px solid var(--window-line,#a8c5d6);margin:-18px -18px 16px;padding:8px 14px;font-size:12px;font-weight:700;color:#2c5261}
 .story-diagram .visual-head>span:last-child{font:13px Consolas,monospace;letter-spacing:3px}
 .story-diagram figcaption{color:#4b6370}
 .diagram-question{font-size:14px;font-weight:600;margin:0 0 16px;line-height:1.7}

@@ -15,7 +15,7 @@ test('Techmin branding keeps source-linked stories and navigation without redund
   assert.match(html, /aria-label="Techmin Feed ホーム"/)
   assert.match(html, /Tech<span class="brand-mint">min<\/span> Feed/)
   assert.match(html, /YOUR DAILY TECH FIX/)
-  assert.match(html, /brand\/mint-loppy\.jpg/)
+  assert.match(html, /brand\/mint-loppy-game\.jpg/)
   assert.match(html, /aria-label="1件目：今回の表示記事"/)
   assert.match(html, /class="nav-story"><strong>今回の表示記事<\/strong><span>実データの分類<\/span>/)
   assert.match(html, /実データの分類/)
@@ -25,8 +25,8 @@ test('Techmin branding keeps source-linked stories and navigation without redund
   const header = html.match(/<header\b[\s\S]*?<\/header>/)[0]
   assert.doesNotMatch(header, /reader-tabs/)
   assert.match(html, /<\/header><nav class="reader-tabs" aria-label="記事の表示">/)
-  assert.match(html, /brand\/discover-folder\.svg/)
-  assert.match(html, /brand\/saved-floppy\.svg/)
+  assert.match(html, /brand\/discover-pc\.svg/)
+  assert.match(html, /brand\/saved-folder\.svg/)
   assert.match(html, /会話ルーム/)
   assert.match(html, /発見/)
   assert.match(html, /保存済み/)
@@ -37,7 +37,7 @@ test('Techmin branding keeps source-linked stories and navigation without redund
 test('public entry renders five editorial stories without preview navigation or unreviewed generation', async () => {
   const html = await renderToString(createSSRApp(FeedView, { stories: trialStories, publicMode: true }))
   assert.equal((html.match(/<article /g) || []).length, 5)
-  assert.equal((html.match(/会話を読む/g) || []).length, 5)
+  assert.equal((html.match(/全8件の会話を開く/g) || []).length, 5)
   assert.match(html, /2026\/10\/24時点の固定記事/)
   assert.match(html, /ニュースの自動更新は準備中/)
   assert.match(html, /AIによる架空の会話/)
@@ -92,7 +92,7 @@ test('article byline uses its source and a topic sticker while repeated speakers
   assert.match(card, /target="_blank" rel="noopener noreferrer"/)
 })
 
-test('topic stickers match between navigation and articles, with unique gradients and a legacy fallback', async () => {
+test('pixel topic avatars match between navigation and articles and retain a legacy fallback', async () => {
   const stories = [
     { ...trialStories[0], id: 'research-icon', emoji: '🔬', category: 'AIの研究' },
     { ...trialStories[1], id: 'guide-icon', emoji: '🧭', category: '使い方としくみ' },
@@ -103,20 +103,24 @@ test('topic stickers match between navigation and articles, with unique gradient
   for (const kind of ['research', 'guide', 'chip']) {
     assert.equal((html.match(new RegExp(`data-kind="${kind}"`, 'g')) || []).length, 2)
   }
-  const gradients = [...html.matchAll(/<linearGradient id="([^"]+)"/g)].map(match => match[1])
-  assert.equal(gradients.length, 18)
-  assert.equal(new Set(gradients).size, gradients.length)
+  assert.equal((html.match(/shape-rendering="crispEdges"/g) || []).length, 6)
+  assert.equal((html.match(/viewBox="0 0 16 16"/gi) || []).length, 6)
   assert.deepEqual(stories, original)
 })
 
-test('reader offers three article actions and end-of-conversation navigation without a next link on the last story', async () => {
+test('reader opens conversations from the preview and keeps article actions below the conversation', async () => {
   const html = await renderToString(createSSRApp(FeedView, { stories: trialStories.slice(0, 2), publicMode: true, saveEnabled: true }))
   assert.doesNotMatch(html, /もっとこれ|好きなテーマ/)
   assert.doesNotMatch(html, /次の発見へ/)
   const articles = [...html.matchAll(/<article\b[\s\S]*?<\/article>/g)].map(match => match[0])
   for (const article of articles) {
     const actions = article.match(/<div class="actions">([\s\S]*?)<\/div>/)[1]
-    assert.equal((actions.match(/<button\b/g) || []).length, 3)
+    assert.equal((actions.match(/<button\b/g) || []).length, 2)
+    assert.match(article, /class="comment-preview" role="button" tabindex="0" aria-expanded="false"/)
+    assert.match(article, /全8件の会話を開く/)
+    assert.doesNotMatch(article, /クリックで会話を開く/)
+    assert.doesNotMatch(actions, /read-comments|会話を読む/)
+    assert.ok(article.indexOf('class="actions"') > article.indexOf('class="conversation-end-actions"'))
     assert.match(article, /会話を閉じる ↑/)
   }
   assert.match(articles[0], /次の記事へ ↓/)
