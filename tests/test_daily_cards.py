@@ -9,7 +9,7 @@ from urllib.error import HTTPError
 
 from collector.card_trial import ROOT, Rejected, exclusive_json
 from collector.daily_cards import (checked_feed, configuration, empty_feed, generate,
-                                   candidates, DAILY_PROMPT)
+                                   candidates, daily_provider, DAILY_PROMPT)
 from collector.article_source import article_text
 from tests.test_card_trial import ENV, NOW, result
 
@@ -214,6 +214,87 @@ class DailyCardsTests(TestCase):
         self.assertEqual(feed['entries'], [])
         self.assertNotIn('PRIVATE_KEY', str(logs.output))
         self.assertNotIn('::warning::', str(logs.output))
+
+    def test_text_detail_is_fixed_and_rechecked_without_payload(self):
+        errors = [Rejected('invalid_text', field='diagram.nodes.2', detail='too_long'),
+                  Rejected('invalid_text', field='diagram.nodes.1'),
+                  Rejected('invalid_language', field='title', detail='empty')]
+        errors[1].detail = ['PRIVATE_KEY\n::warning::injected']
+        with patch('collector.daily_cards.validate_result', side_effect=errors):
+            with self.assertLogs('collector.daily_cards', level='WARNING') as logs:
+                feed = self.generate()
+        records = [json.loads(r.getMessage()) for r in logs.records]
+        self.assertEqual(records[0]['detail'], 'too_long')
+        self.assertNotIn('detail', records[1])
+        self.assertNotIn('detail', records[2])
+        self.assertNotIn('PRIVATE_KEY', str(logs.output))
+        self.assertNotIn('detail', json.dumps(feed))
+
+    def test_candidate_failure_keeps_two_stable_cards_with_one_daily_trial(self):
+        variants = []
+        def send(model, key, article):
+            self.assertTrue(list(self.ledger.glob('2026-10-24-*.json')))
+            variants.append(article['_generation_variant'])
+            value = provider(model, key, article)
+            if article['_generation_variant'] == 'short_diagram_v1':
+                value['diagram']['nodes'] = ['入力を渡す', '処理を行う', 'あ' * 36]
+            return value
+        config = {**CONFIG, 'generation_candidate': 'short_diagram_v1'}
+        with self.assertLogs('collector.daily_cards', level='INFO') as logs:
+            feed = self.generate(config=config, provider=send)
+        self.assertEqual(variants, ['short_diagram_v1', 'stable', 'stable'])
+        self.assertEqual(len(list(self.ledger.glob('*.json'))), 3)
+        self.assertEqual(len(feed['entries']), 2)
+        self.assertEqual(feed['status'], 'ready')
+        diagnostics = [json.loads(r.getMessage()) for r in logs.records]
+        rejected = [r for r in diagnostics if r['event'] == 'daily_card_rejected']
+        self.assertEqual(rejected[0]['field'], 'diagram.nodes.2')
+        self.assertEqual(rejected[0]['detail'], 'too_long')
+        self.assertEqual([r['variant'] for r in diagnostics if r['event'] == 'daily_card_accepted'],
+                         ['stable', 'stable'])
+        self.generate(config=config, provider=send, feed=feed)
+        self.assertEqual(len(variants), 3)
+        for private in ('_generation_variant', 'grounding', 'source_text', 'too_long'):
+            self.assertNotIn(private, json.dumps(feed))
+
+    def test_partial_restart_consumes_trial_reservation_even_when_rejected(self):
+        received = []
+        def send(model, key, article):
+            received.append(article['_generation_variant'])
+            return provider(model, key, article)
+        config = {**CONFIG, 'generation_candidate': 'short_diagram_v1'}
+        self.generate(rows=[row()], config=config,
+            provider=Mock(side_effect=Rejected('incomplete_response')))
+        feed = self.generate(config=config, provider=send)
+        self.assertEqual(received, ['stable', 'stable'])
+        self.assertEqual(len(feed['entries']), 2)
+        self.assertEqual(len(list(self.ledger.glob('*.json'))), 3)
+        self.generate(config=config, provider=send, now=NOW + timedelta(days=1), feed=feed)
+        self.assertEqual(received[2:], ['short_diagram_v1', 'stable', 'stable'])
+
+    def test_prior_manual_reservation_or_rollback_does_not_add_candidate_calls(self):
+        exclusive_json(self.ledger / '2026-10-24-manual-abcdef123456.json', {})
+        variants = []
+        def send(model, key, article):
+            variants.append(article['_generation_variant'])
+            return provider(model, key, article)
+        self.generate(config={**CONFIG, 'generation_candidate': 'short_diagram_v1'}, provider=send)
+        self.assertEqual(variants, ['stable', 'stable'])
+        self.generate(config={**CONFIG, 'generation_candidate': 'off'},
+                      provider=send, now=NOW + timedelta(days=1))
+        self.assertEqual(variants[2:], ['stable'] * 3)
+        with self.assertRaises(ValueError):
+            configuration({**CONFIG, 'generation_candidate': 'unknown'})
+
+    def test_variant_dispatch_keeps_stable_request_and_metadata_private(self):
+        article = dict(title='人工のテスト記事', _generation_variant='stable')
+        with patch('collector.daily_cards.request_card') as request:
+            daily_provider('model', 'secret', article)
+            request.assert_called_once_with('model', 'secret', {'title': '人工のテスト記事'}, prompt=DAILY_PROMPT)
+        with patch('collector.daily_cards.request_card') as request:
+            daily_provider('model', 'secret', {**article, '_generation_variant': 'short_diagram_v1'})
+            request.assert_called_once_with('model', 'secret', {'title': '人工のテスト記事'},
+                                           prompt=DAILY_PROMPT, short_diagram=True)
 
     def test_429_stops_without_retry_and_persists_stop_marker(self):
         send = Mock(side_effect=HTTPError('https://example.com', 429, 'limit', {}, None))

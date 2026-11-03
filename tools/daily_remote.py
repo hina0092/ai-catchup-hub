@@ -2,6 +2,7 @@
 import argparse
 from datetime import datetime
 import json
+import logging
 import os
 from pathlib import Path
 import re
@@ -63,6 +64,7 @@ def run(store, config, output, ledger, *, live=False, env=None, now=None,
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--state-dir', type=Path, required=True)
     parser.add_argument('--ledger-dir', type=Path, required=True)
