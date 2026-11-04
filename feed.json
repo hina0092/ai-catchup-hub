@@ -1,9 +1,142 @@
 {
   "format": 1,
-  "checked_at": "2026-11-04T05:31:39.850982+09:00",
-  "updated_at": "2026-11-04T05:31:39.850982+09:00",
+  "checked_at": "2026-11-05T05:50:08.176411+09:00",
+  "updated_at": "2026-11-05T05:50:08.176411+09:00",
   "status": "ready",
   "entries": [
+    {
+      "id": "a9d32175084e2b7f91a6c",
+      "url": "https://zenn.dev/zaireprow/articles/75fde3bcad528c",
+      "source": "Zenn AI",
+      "published_on": "2026-11-05",
+      "generated_at": "2026-11-05T05:50:08.176411+09:00",
+      "article_kind": "practice",
+      "card": {
+        "title": "写真1枚から「バイセップハート」の動画を作る個人開発ツール",
+        "lead": "TikTokで話題のバイセップハート動画を写真1枚から作成できるツール「Bicep Hearts」の設計についての記事です。",
+        "changed": "写真から参照画像を生成するモデルと、そこから動画を生成するモデルの2段階のパイプラインを採用しています。仕様は7秒の縦長動画に固定されています。",
+        "example": "人物向けには、本人の腕のまま少し引き締めるNormal、ボディビル風のBuff、笑えるレベルのExtremeの3択が用意されています。",
+        "caution": "アップロード時は支払い前に無料で写真チェックが走り、腰から上や両腕が見えている必要があります。",
+        "diagram": {
+          "layout": "steps",
+          "question": "写真からバイセップハート動画を作るまでのパイプラインの流れ",
+          "nodes": [
+            "Nano Bananaがアップロード写真から参照画像を作る",
+            "Seedance 2.0が参照画像から動きを生成する"
+          ],
+          "result": "7秒の縦長動画が出力される"
+        },
+        "comments": [
+          {
+            "name": "名無し",
+            "text": "バイセップハートって何やねん、腕でハート作るトレンドなんか。",
+            "reply_to": null
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "写真から参照画像を作って、そこから動画生成モデルで動かしているそうですね。",
+            "reply_to": 0
+          },
+          {
+            "name": "山田",
+            "text": "プロンプトをいちいち書かなくていいのは気楽でいいですね。",
+            "reply_to": 1
+          },
+          {
+            "name": "パキちゃん",
+            "text": "支払いをする前に、写真のチェックをしてくれるのはすごく助かる！",
+            "reply_to": 2
+          },
+          {
+            "name": "名無し",
+            "text": "買い切りやねんな。サブスクなしで使えるのはええやん。",
+            "reply_to": 3
+          },
+          {
+            "name": "山田",
+            "text": "音声は最初から入れず、無音で書き出す仕様に割り切っているのも面白い。",
+            "reply_to": 4
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "長さは7秒でアスペクト比は9:16の縦長に固定されているみたいです。",
+            "reply_to": 5
+          },
+          {
+            "name": "パキちゃん",
+            "text": "ペット専用の振り付けもあるなんて面白すぎるでしょ。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "a235d09d647e4c22a6d3a",
+      "url": "https://aws.amazon.com/blogs/machine-learning/use-decision-models-with-amazon-bedrock-agentcore-evaluations/",
+      "source": "AWS AI",
+      "published_on": "2026-11-05",
+      "generated_at": "2026-11-05T05:50:08.176411+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "Amazon Bedrock AgentCore Evaluationsで決定モデルを使う",
+        "lead": "Amazon Bedrock AgentCore Evaluationsは、開発中から本番までエージェントを評価できる機能です。",
+        "changed": "Amazon Bedrock AgentCore Evaluationsに決定モデルバックエンドを接続する方法が紹介されました。JevやStrands Decider 2Bをコードベースエバリュエーター経由で利用できます。",
+        "example": "HRアシスタントエージェントを例に、決定モデルやLLMジャッジ、コードベースのチェックを組み合わせて評価を行う検証コードが用意されています。",
+        "caution": "利用にはJev用のTypeSafe APIキーや、Strands Decider用のサーバー実行環境などが必要です。",
+        "diagram": {
+          "layout": "steps",
+          "question": "評価パイプラインはどのように構成されますか",
+          "nodes": [
+            "決定モデルバックエンドを選択する",
+            "オプションフラグを指定して実行する",
+            "評価器が自動で登録される"
+          ],
+          "result": "決定モデルを用いた評価パイプラインがデプロイされ利用可能になります"
+        },
+        "comments": [
+          {
+            "name": "ねこ背",
+            "text": "エージェントの評価って、どんな質問でもいけるん？",
+            "reply_to": null
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "ポリシーに沿っているかや安全性の確認といった、決まった答えのある質問に決定モデルが向いています。",
+            "reply_to": 0
+          },
+          {
+            "name": "パキちゃん",
+            "text": "自由な文章より決まった選択肢で確率を出してくれる方が信頼できそう！",
+            "reply_to": 1
+          },
+          {
+            "name": "バグ太郎",
+            "text": "俺もそう思うで。TypeSafeのJevやオープンソースのStrands Decider 2Bがつながるんや。",
+            "reply_to": 2
+          },
+          {
+            "name": "ねこ背",
+            "text": "その決定モデルって普通のLLMと何が違うん？",
+            "reply_to": 3
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "確率分布を返すので、閾値を決めてプログラムから扱いやすいのが特徴ですね。",
+            "reply_to": 4
+          },
+          {
+            "name": "バグ太郎",
+            "text": "フラグを追加するだけで、Jevなら--with-jevとシークレットを指定してデプロイできるで。",
+            "reply_to": 5
+          },
+          {
+            "name": "パキちゃん",
+            "text": "Strands Deciderも--with-deciderで同じように追加できるの便利ね！",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "af978aaba4ea585cddeb7",
       "url": "https://zenn.dev/yui10/articles/ai-society-basics-01-what-is-ai",
