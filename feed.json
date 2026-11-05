@@ -1,8 +1,8 @@
 {
   "format": 1,
-  "checked_at": "2026-11-05T05:50:08.176411+09:00",
+  "checked_at": "2026-11-06T06:06:40.028242+09:00",
   "updated_at": "2026-11-05T05:50:08.176411+09:00",
-  "status": "ready",
+  "status": "provider_error",
   "entries": [
     {
       "id": "a9d32175084e2b7f91a6c",
