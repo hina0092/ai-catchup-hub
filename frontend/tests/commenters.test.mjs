@@ -13,8 +13,8 @@ after(() => server.close())
 const { default: Avatar } = await server.ssrLoadModule('/src/components/CommentAvatar.vue')
 const { default: FeedView } = await server.ssrLoadModule('/src/prototype/FeedView.vue')
 
-test('all eight approved avatars resolve to local images independently of article order', async () => {
-  assert.equal(cast.length, 8)
+test('all ten approved avatars resolve to local images independently of article order', async () => {
+  assert.equal(cast.length, 10)
   const urls = new Set()
   for (const person of cast) {
     assert.ok(existsSync(new URL(`../src/assets/commenters/${person.avatar}`, import.meta.url)))
@@ -25,7 +25,18 @@ test('all eight approved avatars resolve to local images independently of articl
     assert.ok(src.endsWith(person.avatar))
     urls.add(src)
   }
-  assert.equal(urls.size, 8)
+  assert.equal(urls.size, 10)
+})
+
+test('the old Naruto name keeps the same icon in saved conversations after the name change', async () => {
+  const old = await renderToString(createSSRApp(Avatar, { name: 'なると' }))
+  const current = await renderToString(createSSRApp(Avatar, { name: 'なると@初心者' }))
+  assert.equal(old, current)
+  assert.match(old, /<img/)
+  const story = structuredClone(trialStories[0])
+  story.comments[0][0] = 'なると'
+  const saved = readerSnapshot(story)
+  assert.equal(saved.comments[0][0], 'なると')
 })
 
 test('editorial examples use varied groups of three or four, eight comments and valid earlier replies', () => {

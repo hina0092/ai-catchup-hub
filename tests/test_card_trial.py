@@ -18,7 +18,7 @@ ENV = dict(ENABLE_GEMINI='true', GEMINI_BILLING_DISABLED='true',
 
 
 def result(article=None):
-    names = ['ねこ背', '積読ペンギン', '名無し', 'なると']
+    names = ['ねこ背', '積読ペンギン', '名無し', 'なると@初心者']
     if article:
         from collector.commenters import select_cast
         names = [person['name'] for person in select_cast(article)]
@@ -188,11 +188,23 @@ class CardTrialTests(TestCase):
         validate_result(card)
         self.assertIsNone(Rejected('invalid_text', detail='PRIVATE_KEY').detail)
 
-    def test_stable_schema_and_daily_prompt_match_successful_revision(self):
+    def test_only_cast_and_voice_instructions_change_from_successful_revision(self):
+        # Preserve the verified factual/diagram contract while allowing the reviewed cast/voice update.
         # Snapshot checked against 856764df (11/1--11/3 generation), not a live API call.
         from collector.card_trial import SCHEMA
         from collector.daily_cards import DAILY_PROMPT
-        fingerprint = hashlib.sha256(json.dumps(dict(schema=SCHEMA, prompt=DAILY_PROMPT),
+        schema = deepcopy(SCHEMA)
+        schema['properties']['comments']['items']['properties']['name']['enum'] = [
+            'ねこ背', '積読ペンギン', '山田', '名無し', 'なると', 'ドパガキ', 'パキちゃん', 'バグ太郎']
+        prompt = DAILY_PROMPT.replace(
+            '匿名SNSのような短い掛け合い。人物ごとの方言・敬語／ため口・一人称は後述の名簿を優先する。\n'
+            '素朴な疑問・返答・感想を混ぜる。会話全体を関西弁や敬語にそろえず、返答するときも自分の話し方を保つ。\n'
+            '口調例の内容はコピペしない。記事で確認できない発言や利用実績を作らない。',
+            '口調は匿名掲示板のような、関西弁まじりの短い掛け合い。前提知識のない人の「何が違うん？」から入る。\n'
+            '例えば「ファイル開くだけちゃうん？」「会話も引き継ぐんや」「それは助かりそうやな」のように、疑問・返答・感想を混ぜる。\n'
+            '例文の内容は入力に根拠がある場合だけ使い、コピペしない。全員を強い関西弁にする必要はない。')
+        self.assertNotEqual(prompt, DAILY_PROMPT)
+        fingerprint = hashlib.sha256(json.dumps(dict(schema=schema, prompt=prompt),
             sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         self.assertEqual(fingerprint, 'd9c8ea8bbea871e9b3c47eb0f6bf993a5ca2691426dcb345bc885724d514b558')
 

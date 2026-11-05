@@ -5,7 +5,7 @@ import ArticleActionIcon from './ArticleActionIcon.vue'
 const props = defineProps({ name: { type: String, required: true } })
 const avatars = import.meta.glob('../assets/commenters/*.webp', { eager: true, query: '?url', import: 'default' })
 function avatarFor(name) {
-  const person = commenters.find(person => person.name === name)
+  const person = commenters.find(person => person.name === name || person.aliases?.includes(name))
   return person ? avatars[`../assets/commenters/${person.avatar}`] : null
 }
 </script>

@@ -1,0 +1,40 @@
+{
+  "description": "公開済みの架空コメントの口調差を再現するオフライン確認用の例。記事の事実や、実モデルでの改善効果を検証するものではない。",
+  "cases": [
+    {
+      "name": "ドパガキ",
+      "dialect": "standard",
+      "register": "casual",
+      "observed": "AIの定義って世界中で決まってるわけやないんやな。",
+      "preferred": "AIの定義って、世界中で決まってるわけじゃないんだ。"
+    },
+    {
+      "name": "積読ペンギン",
+      "dialect": "standard",
+      "register": "casual",
+      "observed": "そうですね。国際的には入力から推論して出力を生成するシステムとされていますね。",
+      "preferred": "そうだね。国際的には、入力から推論して出力を生成するシステムとされているよ。"
+    },
+    {
+      "name": "積読ペンギン",
+      "dialect": "standard",
+      "register": "casual",
+      "observed": "推論モデルのGemini 4 Argonなどが発表されたみたいやで。",
+      "preferred": "推論モデルのGemini 4 Argonなどが発表されたみたいだよ。"
+    },
+    {
+      "name": "山田",
+      "dialect": "standard",
+      "register": "casual",
+      "observed": "日本の法律では人間の知的な能力を代替する技術って定義されてるみたいやな。",
+      "preferred": "日本の法律では、人間の知的な能力を代替する技術って定義されてるみたいだな。"
+    },
+    {
+      "name": "パキちゃん",
+      "dialect": "standard",
+      "register": "casual",
+      "observed": "それやと、実装と仕様のずれを見つけにくいんやね。",
+      "preferred": "それだと、実装と仕様のずれを見つけにくいんだね。"
+    }
+  ]
+}
