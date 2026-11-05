@@ -354,7 +354,8 @@ class DailyCardsTests(TestCase):
         bad = {**CONFIG, 'daily_requests': 99}
         with self.assertRaises(ValueError): configuration(bad)
         self.assertIn('機械抽出した本文の一部', DAILY_PROMPT)
-        self.assertIn('関西弁まじりの短い掛け合い', DAILY_PROMPT)
+        self.assertIn('人物ごとの方言・敬語／ため口・一人称', DAILY_PROMPT)
+        self.assertNotIn('関西弁まじりの短い掛け合い', DAILY_PROMPT)
         self.assertNotIn('人が確認して要点化した資料です', DAILY_PROMPT)
 
     def test_article_extraction_prefers_actual_post_body_over_related_article_cards(self):

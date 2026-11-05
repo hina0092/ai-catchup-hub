@@ -81,6 +81,7 @@ class GroundingTests(TestCase):
             validate_result(value, self.article)
 
     def test_prompt_restores_requested_voice_without_faking_experience(self):
-        self.assertIn('関西弁まじりの短い掛け合い', PROMPT)
+        self.assertIn('人物ごとの方言・敬語／ため口・一人称', PROMPT)
+        self.assertNotIn('関西弁まじりの短い掛け合い', PROMPT)
         self.assertIn('役割名にしない', PROMPT)
         self.assertIn('架空の体験を作らない', PROMPT)
