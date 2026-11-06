@@ -1,9 +1,142 @@
 {
   "format": 1,
-  "checked_at": "2026-11-06T06:06:40.028242+09:00",
-  "updated_at": "2026-11-05T05:50:08.176411+09:00",
-  "status": "provider_error",
+  "checked_at": "2026-11-07T05:27:41.654557+09:00",
+  "updated_at": "2026-11-07T05:27:41.654557+09:00",
+  "status": "ready",
   "entries": [
+    {
+      "id": "aa55ad6bf1af7ee52d470",
+      "url": "https://zenn.dev/koheip/articles/rag-visible-sources",
+      "source": "Zenn LLM",
+      "published_on": "2026-11-07",
+      "generated_at": "2026-11-07T05:27:41.654557+09:00",
+      "article_kind": "practice",
+      "card": {
+        "title": "「何を見て答えたか」がわかる日本語PDF用RAGデモの仕組み",
+        "lead": "PDFファイルをアップロードして日本語で質問すると、ファイル名やページ番号の出典付きで答えてくれるRAGのデモアプリを作成した。",
+        "changed": "出典のページ番号を正確に出すため、チャンク分割はライブラリを使わず、日本語の文字数で測って約200文字ずつに分け、ページをまたがないようにした。",
+        "example": "同梱のサンプルPDFである11ページの就業規則や社内FAQを使い、30問の質問で検索精度や回答性能を検証している。",
+        "caution": "E5の類似度スコアは0.8から0.9付近に集まりやすいため、スコアのしきい値だけで無関係と判断するのは難しいという限界がある。",
+        "diagram": {
+          "layout": "steps",
+          "question": "出典を正確に出すためのチャンク分割の処理はどうなっているか？",
+          "nodes": [
+            "日本語の文章を文字数で測る",
+            "文の区切りを優先して約200文字にする",
+            "ページをまたがずにチャンクを作る"
+          ],
+          "result": "ページ番号などの出典を正確に出すことができる"
+        },
+        "comments": [
+          {
+            "name": "積読ペンギン",
+            "text": "ページをまたがないように自分でチャンク分割を実装しているのが面白いね。",
+            "reply_to": null
+          },
+          {
+            "name": "タナカラボ",
+            "text": "APIキーがなくても検索結果をそのまま見せる抽出モードがあるのは、動作確認しやすくて助かるね。",
+            "reply_to": 0
+          },
+          {
+            "name": "名無し",
+            "text": "自作にこだわった理由もソースにちゃんと書いてあって草",
+            "reply_to": 1
+          },
+          {
+            "name": "バグ太郎",
+            "text": "俺もファイル名とページ番号まで出してくれる仕組みなら、ユーザーに説明しやすいわ。",
+            "reply_to": 2
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "チャンクを300文字に広げると言い換え質問の精度が下がってしまう点も数字で示されているよ。",
+            "reply_to": 3
+          },
+          {
+            "name": "タナカラボ",
+            "text": "Hit@3は高いけどHit@1は73.1%らしくて、検索の改善余地が数字でわかるのは実務的だね。",
+            "reply_to": 4
+          },
+          {
+            "name": "名無し",
+            "text": "答えに使った番号だけ出典に出して分からないときは分からないと言わせるの有能すぎやろ",
+            "reply_to": 5
+          },
+          {
+            "name": "バグ太郎",
+            "text": "コードも公開されとるし、自分の環境でも動かして確かめてみるか。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "a189563f1d6f7d0a3fade",
+      "url": "https://aws.amazon.com/blogs/machine-learning/sagemaker-inference-now-supports-multi-instance-gpu-to-maximize-gpu-utilization-for-model-endpoints/",
+      "source": "AWS AI",
+      "published_on": "2026-11-07",
+      "generated_at": "2026-11-07T05:27:41.654557+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "SageMaker InferenceがMulti-Instance GPUに対応",
+        "lead": "Amazon SageMaker InferenceがGPUパーティショニングに対応し、NVIDIA MIGで物理GPUを独立した領域に分割できるようになりました。",
+        "changed": "Amazon SageMaker InferenceでNVIDIA MIGを利用したGPUパーティショニング機能が新発表されました。これにより1つの物理GPUを独立した複数の領域に分割し、異なるモデルを配置してハードウェアレベルの隔離と効率的なリソース利用が可能になります。",
+        "example": "ml.p4d.24xlargeインスタンスの設定でAcceleratorPartitionLayoutsにmig-4g.20gbなどを指定する例が挙げられています。",
+        "caution": "MIGのレイアウト変更はパーティションがアイドル状態のときのみ可能で、SageMaker AIではエンドポイント作成時にレイアウトを選択する必要があります。複数GPUを必要とするモデルには対応しません。",
+        "diagram": {
+          "layout": "steps",
+          "question": "SageMaker InferenceでのGPUパーティショニングの手順はどのようになっていますか",
+          "nodes": [
+            "エンドポイント作成時にレイアウトを指定",
+            "物理GPUが独立したパーティションに分割される"
+          ],
+          "result": "ハードウェアレベルで隔離された複数のパーティションに異なるモデルを配置できる"
+        },
+        "comments": [
+          {
+            "name": "山田",
+            "text": "物理GPUを分割して複数のモデルを載せられるようになるみたいだな。",
+            "reply_to": null
+          },
+          {
+            "name": "タナカラボ",
+            "text": "クバネティスを自分で管理しなくてもMIGが使えるのは助かるね。",
+            "reply_to": 0
+          },
+          {
+            "name": "なると@初心者",
+            "text": "それは、大きなピザを人数分に切り分けるような感じですか？",
+            "reply_to": 1
+          },
+          {
+            "name": "ねこ背",
+            "text": "うちもレイアウトはエンドポイント作る時に決めなあかんらしい。",
+            "reply_to": 2
+          },
+          {
+            "name": "山田",
+            "text": "作り直すときもアイドル状態じゃないと変えられない制限があるみたいだね。",
+            "reply_to": 3
+          },
+          {
+            "name": "タナカラボ",
+            "text": "CreateEndpointConfigの段階でAcceleratorPartitionLayoutsを書く仕様だね。",
+            "reply_to": 4
+          },
+          {
+            "name": "なると@初心者",
+            "text": "具体的なパーティションの種類も設定ファイルで指定できるのですね。",
+            "reply_to": 5
+          },
+          {
+            "name": "ねこ背",
+            "text": "設定は少し必要やけど、専用の基盤を自分で組まんでいいのは楽やわ。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "a9d32175084e2b7f91a6c",
       "url": "https://zenn.dev/zaireprow/articles/75fde3bcad528c",
