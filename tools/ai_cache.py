@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+from collector.diagnostics import OperationalError, failure, git_operation, LOGGER
 
 def git(directory, *args, check=True):
     env = os.environ.copy()
@@ -14,10 +15,20 @@ def git(directory, *args, check=True):
         env.update(GIT_CONFIG_COUNT='1', GIT_CONFIG_KEY_0='http.https://github.com/.extraheader', GIT_CONFIG_VALUE_0='AUTHORIZATION: basic ' + base64.b64encode(('x-access-token:' + env['GH_TOKEN']).encode()).decode())
     try:
         result = subprocess.run(['git', '-C', str(directory), *args], env=env, capture_output=True, text=True, timeout=45)
-    except subprocess.SubprocessError:
-        raise OSError('cache git timed out') from None
-    if check and result.returncode:
-        raise OSError('cache git failed; no force push')
+    except subprocess.TimeoutExpired:
+        error = OperationalError('git_timeout')
+        failure(LOGGER, 'operation_failed', git_operation(args), error)
+        raise error from None
+    except (subprocess.SubprocessError, OSError) as error:
+        failure(LOGGER, 'operation_failed', git_operation(args), error)
+        raise OperationalError('git_failed') from None
+    expected = (not check and ((args and args[0] == 'diff' and result.returncode == 1)
+                              or (args and args[0] == 'ls-remote' and result.returncode == 2)))
+    if result.returncode and not expected:
+        error = OperationalError('git_failed')
+        failure(LOGGER, 'operation_failed', git_operation(args), error, exit_code=result.returncode)
+        if check:
+            raise error
     return result
 
 def setup(directory, repository, initialize=False):

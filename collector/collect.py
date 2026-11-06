@@ -15,6 +15,7 @@ from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
 from collector.anthropic_news import collect_news
+from collector.diagnostics import OperationalError, failure
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = logging.getLogger(__name__)
@@ -88,23 +89,23 @@ def parse_date(value):
 
 def parse_feed(data, source, collected_at):
     if len(data) > MAX_BYTES:
-        raise ValueError('feed exceeds size limit')
+        raise OperationalError('input_too_large')
     # Reject DTD/entity declarations, including UTF-16/32 encodings.
     declarations = re.sub(rb'<!\[CDATA\[.*?\]\]>', b'', data.replace(b'\x00', b''), flags=re.DOTALL).upper()
     if b'<!DOCTYPE' in declarations or b'<!ENTITY' in declarations:
-        raise ValueError('DTD/entities are not supported')
+        raise OperationalError('feed_entities')
     root = ET.fromstring(data)
     if root.tag == 'rss':
         channel = root.find('channel')
         if channel is None:
-            raise ValueError('RSS channel missing')
+            raise OperationalError('feed_format')
         entries = channel.findall('item')
         atom = False
     elif root.tag == ATOM + 'feed':
         entries = root.findall(ATOM + 'entry')
         atom = True
     else:
-        raise ValueError('unsupported feed format')
+        raise OperationalError('feed_format')
     result = []
     for entry in entries:
         prefix = ATOM if atom else ''
@@ -114,7 +115,7 @@ def parse_feed(data, source, collected_at):
              if node.get('rel', 'alternate') == 'alternate'), None)
         url = normalize_url(urljoin(source['url'], link)) if link else None
         if not title or not url:
-            LOG.warning('%s: skipped entry with invalid title/URL', source['name'])
+            LOG.warning('source_entry_skipped: invalid title/URL')
             continue
         summary_node = entry.find(prefix + ('summary' if atom else 'description'))
         summary = '' if summary_node is None else ''.join(summary_node.itertext())
@@ -137,7 +138,7 @@ def fetch(url):
             raise ValueError('invalid redirect URL')
         data = response.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
-        raise ValueError('feed exceeds size limit')
+        raise OperationalError('input_too_large')
     return data
 
 
@@ -145,25 +146,30 @@ def collect(sources, fetcher=fetch):
     articles = {}
     successes = 0
     now = datetime.now(timezone.utc).isoformat()
-    for source in sources:
+    for source_index, source in enumerate(sources, 1):
+        phase = 'source_fetch'
+        LOG.info(json.dumps(dict(event='source_started', source_index=source_index)))
         try:
             if source.get('format') == 'anthropic_news':
                 entries = collect_news(source, now, fetcher)
             elif source.get('format', 'rss') == 'rss':
-                entries = parse_feed(fetcher(source['url']), source, now)
+                data = fetcher(source['url'])
+                phase = 'source_parse'
+                entries = parse_feed(data, source, now)
             else:
-                raise ValueError('unsupported source format')
+                raise OperationalError('source_format')
+            phase = 'source_select'
             limit = source.get('max_articles')
             if limit is not None:
                 if type(limit) is not int or limit < 1:
-                    raise ValueError('max_articles must be a positive integer')
+                    raise OperationalError('source_limit')
                 unique = {entry['url']: entry for entry in reversed(entries)}
                 entries = sorted(unique.values(), key=lambda item: (item['published_at'] or item.get('published_on', ''), item['url']), reverse=True)[:limit]
         except (OSError, ValueError, ET.ParseError) as error:
-            LOG.warning('%s: failed: %s', source['name'], error)
+            failure(LOG, 'source_failed', phase, error, source_index=source_index)
             continue
         successes += 1
-        LOG.info('%s: success, %d articles', source['name'], len(entries))
+        LOG.info('source_index=%d: success, %d articles', source_index, len(entries))
         for article in entries:
             articles.setdefault(article['url'], article)
     result = sorted(articles.values(), key=lambda item: (item['published_at'] or item.get('published_on', ''), item['url']), reverse=True)
@@ -218,7 +224,7 @@ def main(argv=None):
         LOG.info('wrote %d unique articles to %s', len(articles), args.output)
         return 0
     except (OSError, ValueError) as error:
-        LOG.error('%s', error)
+        failure(LOG, 'collector_stopped', 'collector_main', error)
         return 1
 
 

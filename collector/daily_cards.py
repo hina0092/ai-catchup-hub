@@ -18,6 +18,7 @@ from collector.article_source import article_text
 from collector.card_trial import (JST, MODEL, PROMPT, KINDS, REASONS, Rejected, TEXT_LIMITS, TEXT_FIELDS, TEXT_DETAILS,
                                   exclusive_json, request_card, validate_result)
 from collector.gemini import live_allowed
+from collector.diagnostics import failure, stage
 
 STATUSES = {'waiting', 'ready', 'no_new', 'budget_limit', 'generation_paused',
             'source_unavailable', 'invalid_outputs', 'rate_limit', 'provider_error'}
@@ -105,20 +106,28 @@ def safe_url(value):
 def candidates(rows, feed, config, now):
     existing = {e['url'] for e in feed['entries']}
     unique = {}
+    excluded = dict(invalid_or_disallowed=0, already_published=0, invalid_date=0,
+                    outside_date_range=0, duplicate=0)
     for row in rows:
         if (not isinstance(row, dict) or not safe_url(row.get('url'))
                 or urlsplit(row['url']).hostname not in config['article_hosts']
-                or row.get('source') not in config['source_names'] or row['url'] in existing
+                or row.get('source') not in config['source_names']
                 or not isinstance(row.get('title'), str) or not 1 <= len(row['title']) <= 500):
+            excluded['invalid_or_disallowed'] += 1
+            continue
+        if row['url'] in existing:
+            excluded['already_published'] += 1
             continue
         if (row.get('date_precision') == 'day' and row.get('source') == 'Anthropic News'
                 and urlsplit(row['url']).hostname == 'www.anthropic.com'):
             try:
                 day = datetime.strptime(row.get('published_on', ''), '%Y-%m-%d').date()
             except (TypeError, ValueError):
+                excluded['invalid_date'] += 1
                 continue
             today = now.astimezone(JST).date()
             if not today - timedelta(days=config['max_age_days']) <= day <= today:
+                excluded['outside_date_range'] += 1
                 continue
             # Internal calendar-day sorting boundary, not a publication time.
             date = datetime.combine(day, datetime.min.time(), tzinfo=JST)
@@ -126,9 +135,13 @@ def candidates(rows, feed, config, now):
             try:
                 date = timestamp(row.get('published_at'))
             except (TypeError, ValueError):
+                excluded['invalid_date'] += 1
                 continue
             if not now - timedelta(days=config['max_age_days']) <= date <= now:
+                excluded['outside_date_range'] += 1
                 continue
+        if row['url'] in unique:
+            excluded['duplicate'] += 1
         unique.setdefault(row['url'], {**row, '_date': date})
     ordered = sorted(unique.values(), key=lambda r: (r['_date'], r['url']), reverse=True)
     # Prefer different publishers before filling remaining slots by recency.
@@ -137,6 +150,8 @@ def candidates(rows, feed, config, now):
         host = urlsplit(row['url']).hostname
         (rest if host in hosts else first).append(row)
         hosts.add(host)
+    LOGGER.info(json.dumps(dict(event='candidate_filter', excluded=excluded,
+        eligible=len(ordered), deferred=max(0, len(ordered) - 12)), sort_keys=True))
     return (first + rest)[:12]
 
 
@@ -162,24 +177,47 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
     used = len(list(ledger.glob(f'{today}-*.json')))
     output['status'] = 'no_new'
     if used >= config['daily_requests'] or (ledger / f'{today}.stop').exists():
+        LOGGER.info(json.dumps(dict(event='generation_skipped', reason=
+            'rate_limit_stop' if (ledger / f'{today}.stop').exists() else 'daily_budget', used=used)))
         output['status'] = 'budget_limit'
         return output
     if (env.get('GEMINI_MODEL', MODEL) != MODEL
             or not live_allowed(config, env, today)):
+        from datetime import date
+        gates = []
+        if not config['enabled']: gates.append('config_disabled')
+        if env.get('ENABLE_GEMINI') != 'true': gates.append('generation_disabled')
+        if env.get('GEMINI_BILLING_DISABLED') != 'true': gates.append('billing_unconfirmed')
+        if not env.get('GEMINI_API_KEY'): gates.append('key_missing')
+        if env.get('GEMINI_MODEL', MODEL) != MODEL: gates.append('model_not_allowed')
+        try:
+            age = (date.fromisoformat(today) - date.fromisoformat(env.get('GEMINI_FREE_TIER_REVIEWED_ON', ''))).days
+            if not 0 <= age <= 30: gates.append('review_expired_or_future')
+        except (ValueError, TypeError):
+            gates.append('review_date_invalid')
+        LOGGER.info(json.dumps(dict(event='generation_skipped', reasons=gates)))
         output['status'] = 'generation_paused'
         return output
     queue = candidates(rows, output, config, now)
+    LOGGER.info(json.dumps(dict(event='candidate_summary', collected=len(rows), eligible=len(queue))))
     if not queue:
         return output
     attempts, successes = 0, 0
-    for row in queue:
+    for candidate_index, row in enumerate(queue, 1):
         if used >= config['daily_requests']:
             break
         ident = 'a' + hashlib.sha256(row['url'].encode()).hexdigest()[:20]
         if any(ledger.glob(f'{today}-{ident}-*.json')):
+            LOGGER.info(json.dumps(dict(event='candidate_skipped', candidate_index=candidate_index,
+                                        reason='already_reserved')))
             continue
-        excerpt = reader(row['url'], config['article_hosts'], limit=10000)
+        LOGGER.info(json.dumps(dict(event='article_read', candidate_index=candidate_index)))
+        with stage('article_read'):
+            excerpt = reader(row['url'], config['article_hosts'], limit=10000)
         if not isinstance(excerpt, str) or len(excerpt.strip()) < 400:
+            LOGGER.info(json.dumps(dict(event='candidate_skipped', candidate_index=candidate_index,
+                reason='body_too_short' if isinstance(excerpt, str) else 'body_invalid_type',
+                body_chars=len(excerpt.strip()) if isinstance(excerpt, str) else 0)))
             continue
         hint = 'guide' if re.search(r'\bhow to\b|入門|使い方|する方法|手順', row['title'], re.I) else 'auto'
         unsupported = [t for t in ('スマホ', '移動中', 'モバイル')
@@ -195,9 +233,11 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
                             if entry['generated_at'] == previous['generated_at'])
             article['previous_commenters'] = sorted({c['name'] for c in previous['card']['comments']})
         fingerprint = hashlib.sha256(json.dumps(article, sort_keys=True).encode()).hexdigest()
-        exclusive_json(ledger / f'{today}-{ident}-{fingerprint[:12]}.json',
-                       dict(id=ident, fingerprint=fingerprint, version=2))
-        persist(ledger)  # Exceptions stop the job; never call the provider without a pushed reservation.
+        with stage('reservation_write'):
+            exclusive_json(ledger / f'{today}-{ident}-{fingerprint[:12]}.json',
+                           dict(id=ident, fingerprint=fingerprint, version=2))
+        with stage('reservation_persist'):
+            persist(ledger)  # Never call the provider without a pushed reservation.
         if used:
             sleep(15)
         used += 1; attempts += 1
@@ -206,7 +246,7 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
         variant = ('short_diagram_v1' if used == 1
                    and config.get('generation_candidate', 'off') == 'short_diagram_v1' else 'stable')
         LOGGER.info(json.dumps(dict(event='daily_card_generation', attempt=attempts,
-            slot=used, variant=variant), sort_keys=True))
+            slot=used, variant=variant, candidate_index=candidate_index), sort_keys=True))
         phase = 'response'
         try:
             raw = provider(MODEL, env['GEMINI_API_KEY'], {**article, '_generation_variant': variant})
@@ -237,12 +277,15 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
                     diagnostic['detail'] = detail
             LOGGER.warning(json.dumps(diagnostic, sort_keys=True))
         except HTTPError as error:
+            failure(LOGGER, 'daily_provider_failed', phase, error, attempt=attempts, slot=used)
             output['status'] = 'rate_limit' if error.code == 429 else 'provider_error'
             if error.code == 429:
-                (ledger / f'{today}.stop').touch(exist_ok=True)
-                persist(ledger)
+                with stage('rate_limit_persist'):
+                    (ledger / f'{today}.stop').touch(exist_ok=True)
+                    persist(ledger)
             break
-        except (OSError, ValueError, TypeError, KeyError):
+        except (OSError, ValueError, TypeError, KeyError) as error:
+            failure(LOGGER, 'daily_provider_failed', phase, error, attempt=attempts, slot=used)
             output['status'] = 'provider_error'
             break
     if successes:
@@ -252,4 +295,6 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
         output['status'] = 'ready'
     elif not attempts and queue:
         output['status'] = 'source_unavailable'
+    LOGGER.info(json.dumps(dict(event='generation_summary', attempts=attempts, accepted=successes,
+        remaining=max(0, config['daily_requests'] - used), status=output['status'])))
     return checked_feed(output)
