@@ -12,18 +12,19 @@ from collector.collect import collect
 from collector.daily_cards import checked_feed, configuration, empty_feed, generate
 from tools.ai_cache import git
 from tools.card_trial_remote import setup
+from collector.diagnostics import OperationalError, failure, stage, LOGGER
 
 FEED_FILE = 'feed.json'
 
 
 def load_feed(store):
     if store.state['active']:
-        raise ValueError('unfinished generation requires review')
+        raise OperationalError('active_generation')
     path = store.directory / FEED_FILE
     if not path.exists():
         return empty_feed()
     if path.is_symlink() or path.stat().st_size > 2_000_000:
-        raise ValueError('invalid daily feed file')
+        raise OperationalError('invalid_feed')
     return checked_feed(json.loads(path.read_text(encoding='utf-8')))
 
 
@@ -38,28 +39,37 @@ def persist_feed(store, feed):
 
 def run(store, config, output, ledger, *, live=False, env=None, now=None,
         collector=collect, generator=generate):
-    configuration(config)
-    feed = load_feed(store)
+    with stage('config_validate'):
+        configuration(config)
+    with stage('feed_restore'):
+        feed = load_feed(store)
     env = dict(os.environ if env is None else env)
     now = now or datetime.now(JST)
     if live:
-        sources = json.loads((ROOT / 'collector/sources.json').read_text(encoding='utf-8'))
+        with stage('sources_load'):
+            sources = json.loads((ROOT / 'collector/sources.json').read_text(encoding='utf-8'))
         selected = [s for s in sources if s['name'] in config['source_names']]
-        store.begin(ledger)
+        with stage('ledger_begin'):
+            store.begin(ledger)
         try:
-            rows, successes = collector(selected)
+            with stage('source_collect'):
+                rows, successes = collector(selected)
             if successes and rows:
-                feed = generator(rows, feed, ledger, config, env, store.persist, now=now)
+                with stage('card_generate'):
+                    feed = generator(rows, feed, ledger, config, env, store.persist, now=now)
             else:
                 feed = {**feed, 'checked_at': now.isoformat(), 'status': 'source_unavailable'}
-            persist_feed(store, feed)
-            store.finish(ledger)
+            with stage('feed_persist'):
+                persist_feed(store, feed)
+            with stage('ledger_finish'):
+                store.finish(ledger)
         except Exception:
             # Never clear the durable active marker after an interrupted/failed save.
             raise
     output = Path(output)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(checked_feed(feed), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    with stage('feed_export'):
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(checked_feed(feed), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     return feed
 
 
@@ -75,13 +85,16 @@ def main():
         repository = os.environ.get('GITHUB_REPOSITORY', '')
         if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository):
             raise ValueError('repository')
-        config = json.loads((ROOT / 'collector/daily_config.json').read_text(encoding='utf-8'))
-        store = setup(args.state_dir, f'https://github.com/{repository}.git')
+        with stage('config_load'):
+            config = json.loads((ROOT / 'collector/daily_config.json').read_text(encoding='utf-8'))
+        with stage('state_setup'):
+            store = setup(args.state_dir, f'https://github.com/{repository}.git')
         feed = run(store, config, args.output, args.ledger_dir, live=args.live)
         print(json.dumps({'status': feed['status'], 'published_cards': len(feed['entries']),
                           'updated_at': feed['updated_at']}, ensure_ascii=True))
         return 0
-    except (OSError, ValueError, TypeError, KeyError):
+    except Exception as error:
+        failure(LOGGER, 'daily_update_stopped', 'daily_main', error)
         print('Daily update stopped; existing public site preserved. Details redacted.')
         return 1
 

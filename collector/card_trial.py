@@ -8,6 +8,7 @@ import argparse
 from datetime import datetime, timezone, timedelta
 import hashlib
 import json
+import logging
 import os
 from pathlib import Path
 import re
@@ -21,6 +22,9 @@ from collector.gemini import live_allowed
 from collector.card_grounding import KINDS, META, GROUNDING_SCHEMA, validate_grounding
 from collector.card_evidence import evidence_candidates, evidence_schema, restore_grounding
 from collector.commenters import NAMES, cast_prompt, select_cast, validate_cast
+from collector.diagnostics import failure, response_failure, stage
+
+LOGGER = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = 2
@@ -271,12 +275,17 @@ def request_card(model, key, article, *, prompt=PROMPT, short_diagram=False):
     req = Request(f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
                   data=json.dumps(payload, ensure_ascii=False).encode(),
                   headers={'x-goog-api-key': key, 'Content-Type': 'application/json'}, method='POST')
-    with build_opener(NoRedirect).open(req, timeout=60) as response:
-        raw = response.read(1_000_001)
+    with stage('provider_http'):
+        with build_opener(NoRedirect).open(req, timeout=60) as response:
+            raw = response.read(1_000_001)
     if len(raw) > 1_000_000:
         raise Rejected('response_too_large')
     try:
         data = json.loads(raw)
+    except (ValueError, UnicodeError) as error:
+        failure(LOGGER, 'provider_response_failed', 'response_envelope_json', error)
+        raise Rejected('response_schema') from None
+    try:
         candidates = data['candidates']
         if len(candidates) != 1 or candidates[0]['finishReason'] != 'STOP':
             raise Rejected('incomplete_response')
@@ -284,8 +293,11 @@ def request_card(model, key, article, *, prompt=PROMPT, short_diagram=False):
         output = ''.join(p.get('text', '') for p in parts if not p.get('thought'))
         value = json.loads(output)
     except Rejected:
+        response_failure(LOGGER, data)
         raise
-    except (KeyError, TypeError, ValueError, AttributeError):
+    except (KeyError, TypeError, ValueError, AttributeError) as error:
+        response_failure(LOGGER, data)
+        failure(LOGGER, 'provider_response_failed', 'response_content_json', error)
         raise Rejected('response_schema') from None
     # Keep fixed reference errors separate from malformed provider responses.
     return restore_grounding(value, pool, Rejected)
@@ -350,10 +362,12 @@ def run_trial(data, output, *, live=False, env=None, now=None, ledger_dir=None,
                 continue
             if any(r['status'] == 'accepted' for r in report['results'][:-1]) or len(list(ledger.glob(f'{today}-*.json'))) > 0:
                 sleep(15)
-            exclusive_json(ledger / f'{today}-{row["id"]}-{fingerprint[:12]}.json', reservation)
+            with stage('trial_reservation_write'):
+                exclusive_json(ledger / f'{today}-{row["id"]}-{fingerprint[:12]}.json', reservation)
             if persist is not None:
                 # Remote reservation must succeed before any Gemini request.
-                persist(ledger)
+                with stage('trial_reservation_persist'):
+                    persist(ledger)
             try:
                 value = provider(model, env['GEMINI_API_KEY'], row)
                 entry['card'] = validate_result(value, article=row, fixed_cast=True)
@@ -364,6 +378,7 @@ def run_trial(data, output, *, live=False, env=None, now=None, ledger_dir=None,
                 entry['status'] = 'rejected'
                 entry['reason'] = str(error) if str(error) in REASONS else 'invalid_result'
             except HTTPError as error:
+                failure(LOGGER, 'trial_provider_failed', 'response', error)
                 entry['status'] = 'rate_limit' if error.code == 429 else 'http_error'
                 report['stopped'] = True
                 if error.code == 429:
@@ -371,7 +386,8 @@ def run_trial(data, output, *, live=False, env=None, now=None, ledger_dir=None,
                     if persist is not None:
                         persist(ledger)
                 break
-            except (OSError, ValueError, TypeError, KeyError):
+            except (OSError, ValueError, TypeError, KeyError) as error:
+                failure(LOGGER, 'trial_provider_failed', 'response', error)
                 entry['status'] = 'provider_error'
                 report['stopped'] = True
                 break
@@ -402,15 +418,19 @@ def main():
     parser.add_argument('--ledger-dir', type=Path)
     parser.add_argument('--live', action='store_true')
     args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
     try:
-        data = json.loads(args.input.read_text(encoding='utf-8'))
-        report = run_trial(data, args.output, live=args.live, ledger_dir=args.ledger_dir)
+        with stage('trial_input_load'):
+            data = json.loads(args.input.read_text(encoding='utf-8'))
+        with stage('trial_run'):
+            report = run_trial(data, args.output, live=args.live, ledger_dir=args.ledger_dir)
         counts = {}
         for entry in report['results']:
             counts[entry['status']] = counts.get(entry['status'], 0) + 1
         print(json.dumps({'mode': report['mode'], 'counts': counts}, ensure_ascii=False))
         return 0 if not args.live or all(r['status'] == 'accepted' for r in report['results']) else 2
-    except (OSError, ValueError, TypeError, KeyError):
+    except Exception as error:
+        failure(LOGGER, 'trial_stopped', 'trial_main', error)
         print('Trial unavailable. Existing files retained; diagnostic details redacted.')
         return 1
 

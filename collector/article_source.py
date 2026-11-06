@@ -4,6 +4,10 @@ from urllib.request import Request, build_opener, HTTPRedirectHandler
 from urllib.parse import urlsplit
 from urllib.robotparser import RobotFileParser
 import re
+import logging
+from collector.diagnostics import OperationalError, failure
+
+LOGGER = logging.getLogger(__name__)
 
 AGENT = 'AI-Catchup-Hub'
 # Enabling a host also requires a terms review by the operator (config article_hosts).
@@ -20,7 +24,7 @@ def read_url(url, limit):
     with build_opener(NoRedirect).open(Request(url, headers={'User-Agent': AGENT}), timeout=15) as response:
         raw = response.read(limit + 1)
         if len(raw) > limit:
-            raise ValueError('input too large')
+            raise OperationalError('input_too_large')
         return raw.decode(response.headers.get_content_charset() or 'utf-8', errors='replace')
 
 
@@ -66,27 +70,40 @@ class ArticleParser(HTMLParser):
 def article_text(url, hosts, limit=12000, reader=read_url):
     parsed = urlsplit(url)
     if parsed.scheme != 'https' or parsed.username or parsed.password or parsed.port not in (None, 443):
+        failure(LOGGER, 'article_unavailable', 'article_policy', OperationalError('invalid_url'))
         return ''
     if parsed.hostname not in SUPPORTED.intersection(hosts):
+        failure(LOGGER, 'article_unavailable', 'article_policy', OperationalError('host_denied'))
         return ''
     # OpenAI's official RSS omits the canonical trailing slash. Normalize only
     # this known path; keep redirects disabled and check robots on the target.
     if parsed.hostname == 'openai.com' and parsed.path.startswith('/index/') and not parsed.path.endswith('/'):
         url = parsed._replace(path=parsed.path + '/').geturl()
     robots_url = f'https://{parsed.hostname}/robots.txt'
+    phase = 'article_robots'
     try:
         robots = RobotFileParser()
         robots.parse(reader(robots_url, 128000).splitlines())
         if not robots.can_fetch(AGENT, url):
+            failure(LOGGER, 'article_unavailable', phase, OperationalError('robots_denied'))
             return ''
         # Conservatively skip sites requiring long crawl delays.
         if (robots.crawl_delay(AGENT) or robots.crawl_delay('*') or 0) > 15:
+            failure(LOGGER, 'article_unavailable', phase, OperationalError('crawl_delay'))
             return ''
+        phase = 'article_fetch'
         parser = ArticleParser()
-        parser.feed(reader(url, 2_000_000))
+        html = reader(url, 2_000_000)
+        phase = 'article_parse'
+        parser.feed(html)
         if parser.blocked:
+            failure(LOGGER, 'article_unavailable', phase, OperationalError('meta_denied'))
             return ''
         preferred = ' '.join(''.join(parser.preferred_parts).split())
-        return (preferred if parser.has_preferred else ' '.join(''.join(parser.parts).split()))[:limit]
-    except (OSError, ValueError):
+        text = (preferred if parser.has_preferred else ' '.join(''.join(parser.parts).split()))[:limit]
+        if not text:
+            failure(LOGGER, 'article_unavailable', phase, OperationalError('empty_body'))
+        return text
+    except (OSError, ValueError) as error:
+        failure(LOGGER, 'article_unavailable', phase, error)
         return ''

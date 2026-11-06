@@ -6,6 +6,7 @@ leaves active=true and later runs stop until the state is explicitly reviewed.
 import argparse
 from datetime import datetime
 import json
+import logging
 import os
 from pathlib import Path
 import re
@@ -13,6 +14,7 @@ import re
 from collector.card_trial import JST, MODEL, exclusive_json, run_trial, validate_inputs
 from collector.gemini import live_allowed
 from tools.ai_cache import git
+from collector.diagnostics import OperationalError, stage, failure, LOGGER
 
 BRANCH = 'card-trial-state'
 FILE = 'state.json'
@@ -74,7 +76,7 @@ class TrialState:
         if self.state is None:
             self.load()
         if self.state['active']:
-            raise ValueError('unfinished trial requires review')
+            raise OperationalError('active_generation')
         ledger = Path(ledger)
         ledger.mkdir(parents=True, exist_ok=False)
         for name, value in self.state['files'].items():
@@ -122,11 +124,15 @@ def setup(directory, remote, initialize=False):
         store.state = dict(format=1, active=False, files={})
         store.save()
     else:
-        raise OSError('trial state missing or unavailable; no automatic reset')
+        failure(LOGGER, 'state_setup_failed', 'git_ls_remote',
+                OperationalError('state_missing' if found.returncode == 2 else 'git_failed'),
+                exit_code=found.returncode)
+        raise OperationalError('state_missing' if found.returncode == 2 else 'git_failed')
     return store
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--input', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
@@ -147,13 +153,18 @@ def main():
         validate_inputs(data)
         if args.output.exists():
             raise ValueError('existing output')
-        store = setup(args.state_dir, f'https://github.com/{repository}.git', args.initialize_state)
-        store.begin(args.ledger_dir)
-        report = run_trial(data, args.output, live=True, now=now, ledger_dir=args.ledger_dir, persist=store.persist)
-        store.finish(args.ledger_dir)
+        with stage('trial_state_setup'):
+            store = setup(args.state_dir, f'https://github.com/{repository}.git', args.initialize_state)
+        with stage('trial_ledger_begin'):
+            store.begin(args.ledger_dir)
+        with stage('trial_generate'):
+            report = run_trial(data, args.output, live=True, now=now, ledger_dir=args.ledger_dir, persist=store.persist)
+        with stage('trial_ledger_finish'):
+            store.finish(args.ledger_dir)
         print(json.dumps({'mode': 'live', 'statuses': [r['status'] for r in report['results']]}))
         return 0 if all(r['status'] == 'accepted' for r in report['results']) else 2
-    except (OSError, ValueError, TypeError, KeyError):
+    except Exception as error:
+        failure(LOGGER, 'trial_stopped', 'trial_main', error)
         print('Trial stopped; no deployment. Unfinished state requires review. Details redacted.')
         return 1
 

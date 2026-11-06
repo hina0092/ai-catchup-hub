@@ -4,6 +4,7 @@ import hashlib
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit
 from urllib.robotparser import RobotFileParser
+from collector.diagnostics import OperationalError, stage
 
 URL = 'https://www.anthropic.com/news'
 AGENT = 'AI-Catchup-Hub'
@@ -53,13 +54,15 @@ def collect_news(source, collected_at, reader):
     if source['url'] != URL or source['name'] != 'Anthropic News':
         raise ValueError('unsupported HTML source')
     robots = RobotFileParser()
-    robots.parse(reader('https://www.anthropic.com/robots.txt').decode('utf-8').splitlines())
+    with stage('listing_robots'):
+        robots.parse(reader('https://www.anthropic.com/robots.txt').decode('utf-8').splitlines())
     if not robots.can_fetch(AGENT, URL) or (robots.crawl_delay(AGENT) or robots.crawl_delay('*') or 0) > 15:
-        raise ValueError('listing not available for this reader')
+        raise OperationalError('listing_denied')
     parser = NewsListing()
-    parser.feed(reader(URL).decode('utf-8'))
+    with stage('listing_fetch_parse'):
+        parser.feed(reader(URL).decode('utf-8'))
     if parser.blocked:
-        raise ValueError('listing opts out of extraction')
+        raise OperationalError('meta_denied')
     result = []
     for row in parser.rows:
         url = row['url']
@@ -81,5 +84,5 @@ def collect_news(source, collected_at, reader):
             published_at=None, published_on=published_on, date_precision='day',
             summary='', collected_at=collected_at))
     if not result:
-        raise ValueError('news listing structure changed or no dated articles')
+        raise OperationalError('listing_structure')
     return result
