@@ -1,3 +1,4 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-export default defineConfig({ plugins: [vue()], base: './' })
+import { offlineBuild } from './offlineBuild.js'
+export default defineConfig({ plugins: [vue(), offlineBuild()], base: './' })

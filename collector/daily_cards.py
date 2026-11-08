@@ -64,13 +64,23 @@ def timestamp(value):
 
 def checked_feed(value):
     if (not isinstance(value, dict)
-            or set(value) != {'format', 'checked_at', 'updated_at', 'status', 'entries'}
+            or set(value) not in ({'format', 'checked_at', 'updated_at', 'status', 'entries'},
+                                  {'format', 'checked_at', 'updated_at', 'status', 'entries', 'addition_stats'})
             or value['format'] != 1 or value['status'] not in STATUSES
             or not isinstance(value['entries'], list) or len(value['entries']) > 30):
         raise ValueError('daily feed schema')
     for name in ('checked_at', 'updated_at'):
         if value[name] is not None:
             timestamp(value[name])
+    if 'addition_stats' in value:
+        stats = value['addition_stats']
+        if (not isinstance(stats, dict) or set(stats) != {'day', 'count', 'complete'}
+                or not isinstance(stats['day'], str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}', stats['day'])
+                or type(stats['count']) is not int or not 0 <= stats['count'] <= 30
+                or type(stats['complete']) is not bool or value['checked_at'] is None
+                or stats['day'] > timestamp(value['checked_at']).astimezone(JST).date().isoformat()):
+            raise ValueError('daily addition stats')
+        datetime.strptime(stats['day'], '%Y-%m-%d')
     urls, ids = set(), set()
     for entry in value['entries']:
         if (not isinstance(entry, dict) or set(entry) !=
@@ -175,6 +185,15 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
     if not ledger.is_dir():
         raise ValueError('persistent ledger required')
     used = len(list(ledger.glob(f'{today}-*.json')))
+    previous_ids = {entry['id'] for entry in output['entries']}
+    stats = output.get('addition_stats')
+    if not stats or stats['day'] != today:
+        # Existing exports have no complete publication history. Keep their
+        # visible count as a lower bound, never silently turn it into zero.
+        baseline = sum(timestamp(entry['generated_at']).astimezone(JST).date().isoformat() == today
+                       for entry in output['entries'])
+        stats = dict(day=today, count=baseline, complete=used == 0 and baseline == 0)
+    output['addition_stats'] = stats
     output['status'] = 'no_new'
     if used >= config['daily_requests'] or (ledger / f'{today}.stop').exists():
         LOGGER.info(json.dumps(dict(event='generation_skipped', reason=
@@ -291,6 +310,9 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
     if successes:
         output['entries'].sort(key=lambda e: (e['published_on'], e['generated_at'], e['id']), reverse=True)
         output['entries'] = output['entries'][:config['retained_cards']]
+        # Count cards that survive retention and will actually be published,
+        # not provider attempts or accepted cards dropped by the size limit.
+        stats['count'] += sum(entry['id'] not in previous_ids for entry in output['entries'])
         output['updated_at'] = now.isoformat()
         output['status'] = 'ready'
     elif not attempts and queue:

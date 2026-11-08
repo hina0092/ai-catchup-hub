@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import timedelta
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -63,3 +64,16 @@ class DailyRemoteTests(TestCase):
         path = self.store.directory / 'feed.json'; path.write_text('{broken')
         with self.assertRaises(ValueError): load_feed(self.store)
         self.assertEqual(path.read_text(), '{broken')
+
+    def test_next_day_collection_failure_keeps_previous_addition_totals_and_exports_safely(self):
+        feed = {**empty_feed(), 'checked_at': NOW.isoformat(), 'status': 'no_new',
+                'addition_stats': dict(day=NOW.date().isoformat(), count=0, complete=True)}
+        persist_feed(self.store, feed)
+        generator = Mock(side_effect=AssertionError('no generation on source failure'))
+        out = run(self.store, CONFIG, self.root / 'export.json', self.root / 'ledger', live=True,
+                  now=NOW + timedelta(days=1), collector=Mock(return_value=([], 0)), generator=generator)
+        self.assertEqual(out['status'], 'source_unavailable')
+        self.assertEqual(out['addition_stats'], feed['addition_stats'])
+        self.assertEqual(json.loads((self.root / 'export.json').read_text()), out)
+        self.assertFalse(self.store.state['active'])
+        generator.assert_not_called()

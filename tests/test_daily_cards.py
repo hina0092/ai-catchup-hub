@@ -27,6 +27,42 @@ def provider(model, key, article):
 
 
 class DailyCardsTests(TestCase):
+    def test_addition_stats_accumulate_same_day_and_ignore_failed_attempts(self):
+        first = self.generate(rows=[row(0)])
+        self.assertEqual(first['addition_stats'], dict(day=NOW.date().isoformat(), count=1, complete=True))
+        second = self.generate(rows=[row(1)], feed=first)
+        self.assertEqual(second['addition_stats']['count'], 2)
+        with self.assertLogs('collector.daily_cards', level='WARNING'):
+            failed = self.generate(rows=[row(2)], feed=second, provider=Mock(side_effect=Rejected('invalid_text')))
+        self.assertEqual(failed['addition_stats']['count'], 2)
+        self.assertEqual(failed['entries'], second['entries'])
+        self.assertEqual(self.generate(feed=failed)['addition_stats']['count'], 2)
+        self.assertEqual(first['addition_stats']['count'], 1)
+
+    def test_addition_stats_count_only_retained_additions_and_roll_over_by_jst_day(self):
+        first = self.generate(rows=[row(0), row(1), row(2)])
+        tomorrow = NOW + timedelta(days=1)
+        second = self.generate(rows=[row(24), row(25), row(26)], feed=first,
+                               config={**CONFIG, 'retained_cards': 5}, now=tomorrow)
+        self.assertEqual(len(second['entries']), 5)
+        self.assertEqual(second['addition_stats'], dict(day=tomorrow.date().isoformat(), count=2, complete=True))
+        no_new = self.generate(rows=[], feed=second, now=NOW + timedelta(days=2))
+        self.assertEqual(no_new['addition_stats']['count'], 0)
+        self.assertTrue(no_new['addition_stats']['complete'])
+        self.assertEqual(no_new['updated_at'], second['updated_at'])
+
+    def test_legacy_addition_counts_are_lower_bounds_and_invalid_stats_are_rejected(self):
+        old = self.generate(rows=[row(0), row(1), row(2)])
+        del old['addition_stats']
+        checked_feed(old)
+        migrated = self.generate(rows=[], feed=old)
+        self.assertEqual(migrated['addition_stats'], dict(day=NOW.date().isoformat(), count=3, complete=False))
+        for change in ({'count': True}, {'count': -1}, {'complete': 1}, {'day': '2026-02-31'}):
+            bad = deepcopy(migrated)
+            bad['addition_stats'].update(change)
+            with self.assertRaises(ValueError):
+                checked_feed(bad)
+
     def test_repeated_cast_is_rejected_without_losing_previous_card(self):
         first = self.generate(rows=[row(0)])
         def repeated(model, key, article):
