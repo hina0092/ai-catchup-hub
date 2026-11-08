@@ -111,7 +111,52 @@ class DiagnosticTests(TestCase):
                 self.assertEqual(article_text('https://zenn.dev/a', ['zenn.dev'], reader=Mock(side_effect=effects)), '')
             record = json.loads(logs.records[-1].getMessage())
             self.assertEqual((record['reason'], record['phase']), (reason, phase))
+            self.assertEqual(record['source'], 'Zenn')
             self.assertNotIn('PRIVATE_KEY_SOURCE', str(logs.output))
+
+    def test_article_403_records_allowlisted_source_without_request_or_response_content(self):
+        sites = {'zenn.dev': 'Zenn', 'github.blog': 'GitHub Blog AI & ML', 'aws.amazon.com': 'AWS AI',
+                 'openai.com': 'OpenAI News', 'blog.google': 'Google AI', 'www.anthropic.com': 'Anthropic News'}
+        for host, label in sites.items():
+            fetcher = Mock(side_effect=['User-agent: *\nAllow: /',
+                HTTPError('https://private/' + SECRET, 403, SECRET, {'key': SECRET}, io.BytesIO(SECRET.encode()))])
+            with self.subTest(host=host), self.assertLogs('collector.article_source', level='WARNING') as logs:
+                self.assertEqual(article_text(f'https://{host}/news/private-path', [host], reader=fetcher), '')
+            record = json.loads(logs.records[-1].getMessage())
+            self.assertEqual((record['source'], record['http_status'], record['phase']), (label, 403, 'article_fetch'))
+            self.assertNotIn('private-path', str(logs.output))
+            self.assertNotIn('PRIVATE_KEY_SOURCE', str(logs.output))
+            self.assertEqual(fetcher.call_count, 2)
+
+    def test_source_labels_reject_untrusted_and_modified_host_metadata(self):
+        for host in (SECRET, 'openai.com.evil.test', ['openai.com'], None):
+            with self.subTest(host=host), self.assertLogs('safe', level='WARNING') as logs:
+                failure(logging.getLogger('safe'), 'test_failure', 'article_fetch',
+                        OSError(SECRET), source_host=host, source=SECRET)
+            self.assertNotIn('source', json.loads(logs.records[0].getMessage()))
+            self.assertNotIn('PRIVATE_KEY_SOURCE', str(logs.output))
+
+    def test_article_403_skips_candidate_without_consuming_a_generation_slot(self):
+        with TemporaryDirectory() as directory:
+            def fetch(target, limit):
+                if target.endswith('/robots.txt'):
+                    return 'User-agent: *\nAllow: /'
+                if target.endswith('daily-0'):
+                    raise HTTPError(SECRET, 403, SECRET, {}, None)
+                return f'<article>{EXCERPT}</article>'
+            def read(target, hosts, limit):
+                return article_text(target, hosts, limit=limit, reader=fetch)
+            send = Mock(side_effect=provider)
+            with self.assertLogs('collector.article_source', level='WARNING') as logs:
+                feed = generate([row(i) for i in range(4)], empty_feed(), Path(directory),
+                    CONFIG, ENV, Mock(), now=NOW, provider=send, reader=read, sleep=Mock())
+            self.assertEqual(send.call_count, 3)
+            self.assertEqual(len(list(Path(directory).glob('*.json'))), 3)
+            self.assertEqual(len(feed['entries']), 3)
+            self.assertEqual(feed['status'], 'ready')
+            self.assertTrue(all(not entry['url'].endswith('daily-0') for entry in feed['entries']))
+            self.assertEqual(json.loads(logs.records[0].getMessage())['source'], 'Zenn')
+            self.assertNotIn('PRIVATE_KEY_SOURCE', str(logs.output) + json.dumps(feed))
 
     def test_daily_provider_failure_preserves_cards_budget_and_stops_without_retry(self):
         for error in (HTTPError(SECRET, 503, SECRET, {}, None), URLError(TimeoutError(SECRET)),

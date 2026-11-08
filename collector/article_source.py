@@ -69,11 +69,14 @@ class ArticleParser(HTMLParser):
 
 def article_text(url, hosts, limit=12000, reader=read_url):
     parsed = urlsplit(url)
+    def unavailable(phase, error):
+        failure(LOGGER, 'article_unavailable', phase, error, source_host=parsed.hostname)
+
     if parsed.scheme != 'https' or parsed.username or parsed.password or parsed.port not in (None, 443):
-        failure(LOGGER, 'article_unavailable', 'article_policy', OperationalError('invalid_url'))
+        unavailable('article_policy', OperationalError('invalid_url'))
         return ''
     if parsed.hostname not in SUPPORTED.intersection(hosts):
-        failure(LOGGER, 'article_unavailable', 'article_policy', OperationalError('host_denied'))
+        unavailable('article_policy', OperationalError('host_denied'))
         return ''
     # OpenAI's official RSS omits the canonical trailing slash. Normalize only
     # this known path; keep redirects disabled and check robots on the target.
@@ -85,11 +88,11 @@ def article_text(url, hosts, limit=12000, reader=read_url):
         robots = RobotFileParser()
         robots.parse(reader(robots_url, 128000).splitlines())
         if not robots.can_fetch(AGENT, url):
-            failure(LOGGER, 'article_unavailable', phase, OperationalError('robots_denied'))
+            unavailable(phase, OperationalError('robots_denied'))
             return ''
         # Conservatively skip sites requiring long crawl delays.
         if (robots.crawl_delay(AGENT) or robots.crawl_delay('*') or 0) > 15:
-            failure(LOGGER, 'article_unavailable', phase, OperationalError('crawl_delay'))
+            unavailable(phase, OperationalError('crawl_delay'))
             return ''
         phase = 'article_fetch'
         parser = ArticleParser()
@@ -97,13 +100,13 @@ def article_text(url, hosts, limit=12000, reader=read_url):
         phase = 'article_parse'
         parser.feed(html)
         if parser.blocked:
-            failure(LOGGER, 'article_unavailable', phase, OperationalError('meta_denied'))
+            unavailable(phase, OperationalError('meta_denied'))
             return ''
         preferred = ' '.join(''.join(parser.preferred_parts).split())
         text = (preferred if parser.has_preferred else ' '.join(''.join(parser.parts).split()))[:limit]
         if not text:
-            failure(LOGGER, 'article_unavailable', phase, OperationalError('empty_body'))
+            unavailable(phase, OperationalError('empty_body'))
         return text
     except (OSError, ValueError) as error:
-        failure(LOGGER, 'article_unavailable', phase, error)
+        unavailable(phase, error)
         return ''

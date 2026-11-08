@@ -5,6 +5,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
+    'collector/anthropic_news.py', 'tests/test_anthropic_news.py',
     'collector/diagnostics.py', 'tests/test_diagnostics.py',
     'frontend/src/components/TopicSticker.vue',
     'frontend/public/brand/discover-pc.svg', 'frontend/public/brand/saved-folder.svg',
