@@ -1,4 +1,5 @@
 from datetime import timedelta
+import json
 from unittest import TestCase
 from unittest.mock import Mock
 
@@ -12,8 +13,8 @@ SOURCE = dict(name='Anthropic News', url=URL, category='ai-tools', format='anthr
 ROBOTS = b'User-agent: *\nAllow: /'
 
 
-def listing(url='/news/example', date='Oct 23, 2026'):
-    return f'<li data-listing-row="id"><a class="Table__title-link" href="{url}"><h3>Example &amp; AI</h3></a><time>{date}</time></li>'
+def listing(url='/news/example', date='Oct 23, 2026', title_class='Table__title-link'):
+    return f'<li data-listing-row="id"><a class="{title_class}" href="{url}"><h3>Example &amp; AI</h3></a><time>{date}</time></li>'
 
 
 def reader(html):
@@ -21,6 +22,44 @@ def reader(html):
 
 
 class AnthropicNewsTests(TestCase):
+    def test_old_and_current_title_links_ignore_duplicate_and_category_links(self):
+        # Synthetic examples of the observed structures, without fetched article text.
+        for title_class in ('Table__title-link', 'bxgyUW_title-link', 'other future_title-link'):
+            html = listing(title_class=title_class).replace('<time>',
+                '<a class="bxgyUW_category-link" href="/news/announcements">Category</a>'
+                '<a class="bxgyUW_above-link" href="/news/example">Duplicate</a><time>')
+            with self.subTest(title_class=title_class):
+                rows = collect_news(SOURCE, NOW.isoformat(), reader(html))
+                self.assertEqual(len(rows), 1)
+                self.assertEqual(rows[0]['url'], 'https://www.anthropic.com/news/example')
+                self.assertEqual(rows[0]['title'], 'Example & AI')
+
+    def test_summary_counts_dates_even_when_title_link_markup_is_missing(self):
+        html = listing(title_class='changed_heading')
+        with self.assertLogs('collector.anthropic_news', level='INFO') as logs:
+            with self.assertRaises(ValueError):
+                collect_news(SOURCE, NOW.isoformat(), reader(html))
+        summary = json.loads(logs.records[-1].getMessage())
+        self.assertEqual(summary, dict(event='listing_summary', rows=1, title_links=0,
+            titles=0, valid_dates=1, invalid_urls=1, invalid_titles=1, invalid_dates=0, accepted=0))
+
+    def test_summary_distinguishes_invalid_url_title_and_date_without_content(self):
+        secret = 'PRIVATE_SOURCE\n::warning::injected'
+        html = (listing(title_class='bxgyUW_title-link')
+                + listing(url='https://evil.test/news/private?key=PRIVATE_SOURCE')
+                + listing(date=secret)
+                + listing().replace('Example &amp; AI', secret * 30))
+        with self.assertLogs('collector.anthropic_news', level='INFO') as logs:
+            rows = collect_news(SOURCE, NOW.isoformat(), reader(html))
+        summary = json.loads(logs.records[-1].getMessage())
+        self.assertEqual((summary['rows'], summary['title_links'], summary['valid_dates']), (4, 4, 3))
+        self.assertEqual((summary['invalid_urls'], summary['invalid_titles'], summary['invalid_dates']), (1, 1, 1))
+        self.assertEqual(summary['accepted'], 1)
+        self.assertEqual(len(rows), 1)
+        self.assertNotIn('PRIVATE_SOURCE', str(logs.output))
+        self.assertNotIn('::warning::', str(logs.output))
+        self.assertNotIn('evil.test', str(logs.output))
+
     def test_official_listing_retains_date_precision_and_does_not_invent_time(self):
         fetcher = reader(listing())
         rows = collect_news(SOURCE, NOW.isoformat(), fetcher)

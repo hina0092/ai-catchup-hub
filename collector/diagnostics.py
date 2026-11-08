@@ -16,6 +16,12 @@ ORIGIN_FILES = frozenset(('collector/diagnostics.py', 'collector/daily_cards.py'
     'collector/commenters.py', 'collector/gemini.py', 'collector/article_source.py',
     'collector/collect.py', 'collector/anthropic_news.py', 'tools/daily_remote.py',
     'tools/card_trial_remote.py', 'tools/ai_cache.py'))
+SOURCE_LABELS = {
+    'zenn.dev': 'Zenn', 'qiita.com': 'Qiita', 'github.blog': 'GitHub Blog AI & ML',
+    'devblogs.microsoft.com': 'Microsoft', 'aws.amazon.com': 'AWS AI',
+    'openai.com': 'OpenAI News', 'blog.google': 'Google AI',
+    'www.anthropic.com': 'Anthropic News',
+}
 
 
 class OperationalError(OSError, ValueError):
@@ -54,9 +60,11 @@ def error_fields(error):
                 {'reason': 'unexpected_error'})
 
 
-def failure(logger, event, phase, error, **counts):
-    # Call sites supply fixed event/phase names; metadata is integers only.
+def failure(logger, event, phase, error, *, source_host=None, **counts):
+    # Call sites supply fixed event/phase names; no arbitrary source strings.
     record = dict(event=event, phase=phase, **error_fields(error))
+    if isinstance(source_host, str) and source_host in SOURCE_LABELS:
+        record['source'] = SOURCE_LABELS[source_host]
     trace = error.__traceback__
     while trace is not None:
         try:
