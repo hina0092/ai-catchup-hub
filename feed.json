@@ -1,9 +1,75 @@
 {
   "format": 1,
-  "checked_at": "2026-11-08T03:49:16.270026+09:00",
-  "updated_at": "2026-11-08T03:49:16.270026+09:00",
+  "checked_at": "2026-11-09T03:51:04.865560+09:00",
+  "updated_at": "2026-11-09T03:51:04.865560+09:00",
   "status": "ready",
   "entries": [
+    {
+      "id": "aca384cbe45beeb395ffd",
+      "url": "https://zenn.dev/shinai/articles/claude-code-token-saving-7habits",
+      "source": "Zenn AI",
+      "published_on": "2026-11-09",
+      "generated_at": "2026-11-09T03:51:04.865560+09:00",
+      "article_kind": "guide",
+      "card": {
+        "title": "Claude Codeのトークンを減らす7つの習慣：CLAUDE.mdの整理",
+        "lead": "Claude Codeを毎日使っていると週の利用上限に当たりやすいため、公式ドキュメントに基づいてコストや消費トークンを減らす7つの習慣をまとめています。",
+        "changed": "CLAUDE.mdは200行未満を公式の目安とし、毎回必要な事実だけを書いてルートを軽くする工夫が紹介されています。",
+        "example": "プロジェクトのフォルダ直下に索引ファイルを置き、CLAUDE.mdに最初に索引だけを読むよう記述することで、フォルダ全体の不要な検索を防ぐ工夫が挙げられています。",
+        "caution": "特定のファイルにしか関係しない指示に paths を書き忘れると、毎セッション全体に読み込まれてしまうため注意が必要です。",
+        "diagram": {
+          "layout": "steps",
+          "question": "CLAUDE.mdと設定の役割分担はどうなっているか",
+          "nodes": [
+            "CLAUDE.mdに起動時の共通指示を書く",
+            "pathsで特定ファイルのルールを分ける"
+          ],
+          "result": "毎セッションの無駄な読み込みを減らすことができる"
+        },
+        "comments": [
+          {
+            "name": "ドパガキ",
+            "text": "CLAUDE.mdは短くしないといけないのか？俺は長いほうが安心だけどなあ。",
+            "reply_to": null
+          },
+          {
+            "name": "山田",
+            "text": "長いと毎セッション読み込まれて消費が増えるって公式の目安に書いてあるぞ。",
+            "reply_to": 0
+          },
+          {
+            "name": "名無し",
+            "text": "200行未満にするのがええんやな。ソースにもそう書いてあるわ。",
+            "reply_to": 1
+          },
+          {
+            "name": "パキちゃん",
+            "text": "ファイルごとのルール分けもパスを書かないと全部読まれちゃうから気をつけないとね！",
+            "reply_to": null
+          },
+          {
+            "name": "山田",
+            "text": "pathsの書き忘れに注意しろってちゃんと本文にあるな。",
+            "reply_to": 3
+          },
+          {
+            "name": "ドパガキ",
+            "text": "フックで出力を絞る方法もあるのか。色々やり方があるんだな。",
+            "reply_to": null
+          },
+          {
+            "name": "名無し",
+            "text": "使っとらんMCPサーバーを切るのも大事やな。CLI使うほうがええんか。",
+            "reply_to": 5
+          },
+          {
+            "name": "パキちゃん",
+            "text": "こういう細かい工夫の積み重ねでトークンが節約できるのは助かるー！",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "a76e7afb762ff5f7d86bf",
       "url": "https://zenn.dev/zer0m0hum0hu/articles/5445a3f4cbd019",
@@ -67,6 +133,73 @@
             "name": "ドパガキ",
             "text": "まずは一番下のSTRプランから気軽に始めてみるのもよさそうだな。",
             "reply_to": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "a3f022a3e769001462e50",
+      "url": "https://aws.amazon.com/blogs/machine-learning/serverless-mcp-server-for-ai-agent-data-lake-access-on-amazon-ecs-fargate/",
+      "source": "AWS AI",
+      "published_on": "2026-11-07",
+      "generated_at": "2026-11-09T03:51:04.865560+09:00",
+      "article_kind": "guide",
+      "card": {
+        "title": "Amazon ECS Fargate上のサーバーレスMCPサーバーでAIエージェントからデータレイクへアクセスする",
+        "lead": "Amazon ECS上のAWS FargateでサーバーレスなModel Context Protocolサーバーを構築し、AIエージェントに会話型アクセスを提供する仕組みです。",
+        "changed": "Amazon ECS Fargate上で動作するサーバーレスMCPサーバーを中央のゲートウェイとして配置し、AIエージェントが複数のデータソースにアクセスできるようにした。",
+        "example": "パッケージ追跡情報や労務管理といった業務ドメインごとにコンテキストマッピングを設定し、クエリ対象のテーブルを限定して検索精度を高めることができる。",
+        "caution": "AthenaクエリツールではSELECTのみのクエリが強制され、データレイクに到達する前に書き込み操作がツールレベルで拒否される。",
+        "diagram": {
+          "layout": "steps",
+          "question": "ユーザーのクエリからデータレイヤーに至るリクエストの流れはどのようになるか？",
+          "nodes": [
+            "ユーザーがクライアントアプリからクエリを送信する",
+            "Route 53とロードバランサーを介して認証される",
+            "Amazon ECS Fargate上のMCPサーバー層で処理される"
+          ],
+          "result": "Amazon Bedrockを活用したエージェントがツールを実行し、データレイクから結果を取得する"
+        },
+        "comments": [
+          {
+            "name": "タナカラボ",
+            "text": "エージェントごとに直接データベースやAPIをつなぐと、連携ロジックが重複して大変にならないかな？",
+            "reply_to": null
+          },
+          {
+            "name": "takumi",
+            "text": "新しいデータセットの公開がJSONメタファイルだけで自動発見されるのは、スケーラビリティ的に最高だね！",
+            "reply_to": null
+          },
+          {
+            "name": "ねこ背",
+            "text": "データセットが増えるたびにアクセス制御がバラバラになるの、うちも直したいわあ。",
+            "reply_to": 0
+          },
+          {
+            "name": "タナカラボ",
+            "text": "Fargateのタスク自体はステートレスで、会話状態はDynamoDBに保存されるから管理しやすいね。",
+            "reply_to": null
+          },
+          {
+            "name": "パキちゃん",
+            "text": "書き込み操作がツールレベルでブロックされるから、SELECTだけになって安全で安心！",
+            "reply_to": null
+          },
+          {
+            "name": "takumi",
+            "text": "構成駆動型のデータレイクアクセスによって、オンボーディングの効率が圧倒的に上がるな。",
+            "reply_to": null
+          },
+          {
+            "name": "ねこ背",
+            "text": "コンテキストマッピングのおかげで、エンドツーエンドのレイテンシーもテストで確認できてるんやね。",
+            "reply_to": null
+          },
+          {
+            "name": "パキちゃん",
+            "text": "データベース名やテーブル名、ビジネス説明がJSONファイルに細かく書けるんだね。",
+            "reply_to": null
           }
         ]
       }
@@ -334,6 +467,73 @@
           {
             "name": "ねこ背",
             "text": "設定は少し必要やけど、専用の基盤を自分で組まんでいいのは楽やわ。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "a27b87d65d3f99406683f",
+      "url": "https://blog.google/innovation-and-ai/technology/developers-tools/introducing-gemini-omni-1-2-flash/",
+      "source": "Google AI",
+      "published_on": "2026-11-06",
+      "generated_at": "2026-11-09T03:51:04.865560+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "Gemini Omni 1.2 Flash発表、15秒動画やコスト削減に対応",
+        "lead": "Gemini Omni 1.2 Flashが提供開始され、15秒の動画生成、参照の再現性向上、対話型編集に対応する。",
+        "changed": "Gemini Omni 1.2 Flashが導入され、15秒の動画作成や対話型編集機能が追加された。価格はGemini Omni 1.1から30%引き下げられ、720p動画が1秒あたり0.07ドルで利用可能になる。",
+        "example": "1枚のモデル写真と3つの衣装の前後ショットを組み合わせて、360度の回転やマッチカットを含む15秒のバーチャル試着シーケンスを生成できる。",
+        "caution": "高速なスポーツアクションや急なスクリプト変更、複雑な物理演算などの改善は今後も継続して開発中である。",
+        "diagram": {
+          "layout": "steps",
+          "question": "Gemini Omni 1.2 Flashでコストを抑えながら動画を制作するワークフロー",
+          "nodes": [
+            "360pまたは720pで高速にドラフトを作成する",
+            "追加の編集で詳細を修正する",
+            "1080pまたは4Kにアップスケールする"
+          ],
+          "result": "コストを抑えつつ高品質な動画を作成できる"
+        },
+        "comments": [
+          {
+            "name": "ドパガキ",
+            "text": "価格が30%安くなって1秒あたり0.07ドルになったって本当か？",
+            "reply_to": null
+          },
+          {
+            "name": "ねこ背",
+            "text": "15秒までの動画を1秒刻みで指定できるんやな、そこそこ長くてええやん",
+            "reply_to": 0
+          },
+          {
+            "name": "山田",
+            "text": "お、ちゃんと記事の数字読んでるじゃんｗ",
+            "reply_to": 1
+          },
+          {
+            "name": "名無し",
+            "text": "最初に粗い解像度でドラフト作って後から直せるからコスト抑えられるらしいで",
+            "reply_to": 2
+          },
+          {
+            "name": "ねこ背",
+            "text": "作り直さんでも対話形式で背景とか変えられるの、うちみたいなズボラには助かるわ",
+            "reply_to": 3
+          },
+          {
+            "name": "ドパガキ",
+            "text": "俺もAPIやGoogle Vidsで早速使ってみるわ",
+            "reply_to": 4
+          },
+          {
+            "name": "山田",
+            "text": "ただしスポーツの動きとか複雑な物理演算はまだ開発中らしいから気を付けろよ",
+            "reply_to": 5
+          },
+          {
+            "name": "名無し",
+            "text": "完璧じゃない部分もあるけど、プロ向けの機能が安く使えるのはありがたい話やな",
             "reply_to": 6
           }
         ]
