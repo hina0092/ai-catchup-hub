@@ -1,13 +1,36 @@
 import { test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'vite'
-import { createSSRApp } from 'vue'
+import { createSSRApp, h } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { trialStories } from '../src/prototype/trialStories.js'
 
 const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' })
 after(() => server.close())
 const { default: FeedView } = await server.ssrLoadModule('/src/prototype/FeedView.vue')
+const { default: FeedFilters } = await server.ssrLoadModule('/src/components/FeedFilters.vue')
+
+test('search belongs to the header and keeps inactive counts out of the reading surface', async () => {
+  const filters = { query: '', source: '', category: '', unreadOnly: false }
+  const html = await renderToString(createSSRApp({ render: () => h(FeedView, { stories: trialStories, publicMode: true }, {
+    search: () => h(FeedFilters, { filters, options: { sources: [], categories: [] }, count: 5, total: 5 }),
+  }) }))
+  const header = html.match(/<header\b[\s\S]*?<\/header>/)[0]
+  assert.match(header, /aria-label="記事を検索"/)
+  assert.match(header, /placeholder="キーワードで記事を検索"/)
+  assert.match(header, /aria-label="絞り込み"/)
+  assert.doesNotMatch(header, /5件中 5件/)
+  assert.doesNotMatch(html.match(/<main\b[\s\S]*?<\/main>/)[0], /class="feed-filters"/)
+})
+
+test('active search exposes its count and reset without opening source selectors', async () => {
+  const html = await renderToString(createSSRApp(FeedFilters, {
+    filters: { query: '課金', source: '', category: '', unreadOnly: false }, options: { sources: ['AWS'], categories: [] }, count: 1, total: 5,
+  }))
+  assert.match(html, /5件中 1件/)
+  assert.match(html, /条件をクリア/)
+  assert.doesNotMatch(html, /<select/)
+})
 
 test('Techmin branding keeps source-linked stories and navigation without redundant browser chrome or catchphrase', async () => {
   const story = { ...trialStories[0], title: '今回の表示記事', category: '実データの分類' }
@@ -136,7 +159,58 @@ test('update notice starts collapsed while preserving status, schedule and fallb
   assert.match(html, /見本5件を表示中/)
   assert.match(html, /更新の詳細/)
   assert.match(html, /初回の自動更新を待っています/)
-  assert.match(html, /朝6時までの更新を目標/)
-  assert.match(html, /前夜23:17と午前0:17/)
+  assert.match(html, /毎朝の更新を目指して、1日最大3件/)
+  assert.doesNotMatch(html, /前夜23:17と午前0:17/)
   assert.match(html, /2026\/10\/24の見本5件/)
+})
+
+test('daily counts remain independent of filtering and offline readiness lives inside details', async () => {
+  const props = { stories: [], publicMode: true, edition: { generated: true, updated: '2026/11/9 5:00', checked: '2026/11/9 5:30', additions: { label: '11/9：2件追加', date: '2026/11/9', complete: true } } }
+  const render = savedView => renderToString(createSSRApp({ render: () => h(FeedView, { ...props, savedView }, {
+    'offline-status': () => h('p', { class: 'offline-ready' }, 'オフラインの準備ができています'),
+  }) }))
+  const html = await render(false)
+  const details = html.match(/<details\b[\s\S]*?<\/details>/)[0]
+  assert.match(details, /11\/9：2件追加/)
+  assert.doesNotMatch(details, /集計日：|（日本時間）|説明・図・会話はAI生成です/)
+  assert.match(details, /オフラインの準備ができています/)
+  assert.equal((html.match(/オフラインの準備ができています/g) || []).length, 1)
+  const saved = await render(true)
+  assert.doesNotMatch(saved, /edition-status/)
+  assert.match(saved.match(/<footer\b[\s\S]*?<\/footer>/)[0], /オフラインの準備ができています/)
+})
+
+test('read and share controls retain all existing actions and stable article anchors', async () => {
+  const story = trialStories[0]
+  const html = await renderToString(createSSRApp(FeedView, {
+    stories: [story], publicMode: true, saveEnabled: true, readEnabled: true, shareEnabled: true, readUrls: new Set([story.url]),
+  }))
+  assert.match(html, new RegExp(`id="story-${story.id}"`))
+  assert.match(html, /✓ 読んだ/)
+  assert.match(html, /未読に戻す/)
+  assert.match(html, /保存する：/)
+  assert.match(html, /AIに聞く：/)
+  assert.match(html, /シェア/)
+  assert.doesNotMatch(html, /記事リンクをコピー|copy-article-link/)
+  assert.match(html, /aria-controls="share-options-polly"/)
+  const actions = html.slice(html.indexOf('<div class="actions">')).split('</article>')[0]
+  assert.equal((actions.match(/<button\b/g) || []).length, 4)
+  assert.equal((html.match(/class="comment-body preview-bubble"/g) || []).length, 8)
+})
+
+test('filtering to zero never changes the edition source count', async () => {
+  const html = await renderToString(createSSRApp(FeedView, {
+    stories: [], publicMode: true, edition: { count: 5, generated: false, updated: '未実行', checked: '未実行' },
+  }))
+  assert.match(html, /見本5件を表示中/)
+  assert.doesNotMatch(html, /見本0件を表示中/)
+})
+
+test('undo feedback stays outside the feed and keeps an interactive undo action', async () => {
+  const html = await renderToString(createSSRApp({ render: () => h(FeedView, { stories: trialStories, publicMode: true }, {
+    feedback: () => h('div', { class: 'read-feedback' }, ['読了にしました', h('button', '元に戻す')]),
+  }) }))
+  assert.doesNotMatch(html.match(/<main\b[\s\S]*?<\/main>/)[0], /読了にしました|元に戻す/)
+  assert.match(html, /class="[^"]*toast-actionable[^"]*" role="status"/)
+  assert.match(html, /<button>元に戻す<\/button>/)
 })

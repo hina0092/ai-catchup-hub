@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { createServer } from 'vite'
 import { createSSRApp } from 'vue'
 import { renderToString } from 'vue/server-renderer'
-import { dailyStories, displayTime } from '../src/dailyStories.js'
+import { dailyStories, displayTime, additionSummary } from '../src/dailyStories.js'
 
 const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' })
 after(() => server.close())
@@ -21,8 +21,8 @@ const fixture = {
 test('deployed export renders without preview links and describes automatic updates honestly', async () => {
   dailyStories(deployed)
   const html = await renderToString(createSSRApp(PublicFeed))
-  assert.match(html,/朝6時までの更新を目標/)
-  assert.match(html,/前夜23:17と午前0:17/)
+  assert.match(html,/毎朝の更新を目指して、1日最大3件/)
+  assert.doesNotMatch(html,/前夜23:17と午前0:17/)
   assert.match(html,/AIによる架空の会話/)
   assert.doesNotMatch(html,/catchup-preview\.html|LOCAL PREVIEW/)
   assert.equal((html.match(/<article /g)||[]).length,deployed.entries.length||5)
@@ -34,8 +34,9 @@ test('automatic stories retain generated text, reply targets, null diagram, and 
   assert.deepEqual(story.inputs,[])
   assert.equal(story.date,'2026/10/25')
   assert.equal(story.changed,fixture.entries[0].card.changed)
-  const html = await renderToString(createSSRApp(FeedView,{stories:[story],publicMode:true,edition:{generated:true,updated:'2026/10/25 19:18',checked:'2026/10/25 19:18',message:'新しい記事を追加しました。'}}))
-  assert.match(html,/新しい記事を追加しました/)
+  const html = await renderToString(createSSRApp(FeedView,{stories:[story],publicMode:true,edition:{generated:true,updated:'2026/10/25 19:18',checked:'2026/10/25 19:18',message:''}}))
+  assert.match(html,/更新確認：2026\/10\/25 19:18/)
+  assert.doesNotMatch(html,/新しい記事を追加しました|説明・図・会話はAI生成です/)
   assert.doesNotMatch(html,/固定記事|見本5件|2026\/10\/24版/)
 })
 test('invalid URLs, dates, replies and missing fields are rejected before deployment', () => {
@@ -47,6 +48,21 @@ test('invalid URLs, dates, replies and missing fields are rejected before deploy
 test('display time is explicitly JST and unknown time does not claim a successful update', () => {
   assert.match(displayTime('2026-10-25T10:18:00Z'),/2026\/10\/25 19:18/)
   assert.equal(displayTime(null),'未実行')
+})
+
+test('addition summaries use persisted JST daily totals and distinguish confirmed zero from unknown', () => {
+  const feed = { ...fixture, checked_at: '2026-10-25T15:30:00Z', addition_stats: { day: '2026-10-26', count: 2, complete: true } }
+  assert.equal(additionSummary(feed).label, '10/26：2件追加')
+  assert.equal(additionSummary({ ...feed, addition_stats: { ...feed.addition_stats, count: 0 } }).label, '10/26：0件追加')
+  assert.equal(additionSummary({ ...feed, addition_stats: { ...feed.addition_stats, count: 0, complete: false } }).label, '10/26：件数未確認')
+  const legacy = additionSummary(fixture)
+  assert.equal(legacy.label, '10/25：1件以上追加')
+  assert.equal(legacy.complete, false)
+  assert.equal(additionSummary({ checked_at: null, entries: [] }), null)
+  assert.equal(additionSummary({ ...feed, checked_at:'2026-10-27T05:00:00+09:00', status:'source_unavailable' }).label, '10/26：2件追加')
+  for (const change of [{ count: -1 }, { count: 31 }, { complete: 1 }, { day: '2026-10-27' }]) {
+    assert.throws(() => additionSummary({ ...feed, addition_stats: { ...feed.addition_stats, ...change } }))
+  }
 })
 
 test('official OpenAI and Google articles and comparison diagrams render while lookalike hosts fail', () => {

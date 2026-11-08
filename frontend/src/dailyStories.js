@@ -54,3 +54,24 @@ export function displayTime(value) {
   if (!validTime(value)) return '未実行'
   return new Intl.DateTimeFormat('ja-JP', { timeZone:'Asia/Tokyo', year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false }).format(new Date(value))
 }
+
+function jstDay(value) {
+  if (!validTime(value)) return null
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(value))
+  const part = type => parts.find(part => part.type === type).value
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+export function additionSummary(feed) {
+  const checkedDay = jstDay(feed.checked_at)
+  const stats = feed.addition_stats
+  if (stats !== undefined && (!stats || !validDay(stats.day) || !checkedDay || stats.day > checkedDay
+      || !Number.isInteger(stats.count) || stats.count < 0 || stats.count > 30 || typeof stats.complete !== 'boolean')) throw new Error('invalid addition stats')
+  const day = stats?.day ?? checkedDay
+  if (!day) return null
+  const count = stats?.count ?? feed.entries.filter(entry => jstDay(entry.generated_at) === day).length
+  const complete = stats?.complete ?? false
+  const [year, month, date] = day.split('-').map(Number)
+  const result = complete ? `${count}件追加` : count ? `${count}件以上追加` : '件数未確認'
+  return { day, date: `${year}/${month}/${date}`, count, complete, label: `${month}/${date}：${result}` }
+}

@@ -6,6 +6,7 @@ import StoryDiagram from '../components/StoryDiagram.vue'
 import CommentAvatar from '../components/CommentAvatar.vue'
 import TopicSticker from '../components/TopicSticker.vue'
 import { topicIcon } from '../readerIcons.js'
+import { buildShareData, shareArticle, copyText } from '../shareText.js'
 
 const props = defineProps({
   stories: { type: Array, required: true },
@@ -20,23 +21,45 @@ const props = defineProps({
   savedUrls: { type:Array, default:() => [] },
   legacySaved: { type:Array, default:() => [] },
   storageWarning: { type:String, default:'' },
+  readEnabled: Boolean,
+  shareEnabled: Boolean,
+  readUrls: { type: Set, default: () => new Set() },
 })
-const emit = defineEmits(['toggle-save','change-view','remove-legacy'])
+const emit = defineEmits(['toggle-save','change-view','remove-legacy','toggle-read','dismiss-feedback'])
 const brandBase = `${import.meta.env.BASE_URL}brand/`
 const { publicMode, generatedMode, trialMode, generatedError, homeUrl } = props
 const stories = computed(() => props.stories)
 const countLabel = computed(() => String(props.stories.length).padStart(2, '0'))
 
-const active = ref(0)
+const activeId = ref(null)
+const active = computed(() => Math.max(0, props.stories.findIndex(story => story.id === activeId.value)))
 const expandedComments = ref(new Set())
 const asking = ref(null), askContext = ref(''), askReturnFocus = ref(null)
 const notice = ref('')
+const sharing = ref(null)
+const nativeShare = ref(false)
+async function toggleShare(story) {
+  sharing.value = sharing.value === story.id ? null : story.id
+  await nextTick()
+  if (sharing.value) document.getElementById(`copy-share-${story.id}`)?.focus({ preventScroll: true })
+}
+function closeShare(id, returnFocus = false) {
+  sharing.value = null
+  if (returnFocus) document.getElementById(`share-${id}`)?.focus({ preventScroll: true })
+}
+function outsideShare(event) {
+  if (!event.target.closest?.('.share-action')) sharing.value = null
+}
+function leaveShare(event) {
+  if (!event.currentTarget.contains(event.relatedTarget)) sharing.value = null
+}
 function sourceDomain(url) { return new URL(url).hostname }
 function replyLabel(story, parent) {
   return Number.isInteger(parent) && story.comments[parent] ? `${story.comments[parent][0]}へ` : '返信'
 }
 let observer, noticeTimer
 function notify(message) {
+  emit('dismiss-feedback')
   notice.value = message
   clearTimeout(noticeTimer)
   noticeTimer = setTimeout(() => notice.value = '', 4500)
@@ -70,37 +93,56 @@ async function closeCommentsFromEnd(story) {
   trigger?.scrollIntoView({ block: 'center', behavior: 'instant' })
 }
 function go(index) {
+  navigateTo(props.stories[index]?.id)
+}
+function navigateTo(id) {
+  if (!id) return
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  document.getElementById(`story-${index}`)?.scrollIntoView({ behavior: reduce ? 'instant' : 'smooth', block: 'start' })
+  document.getElementById(`story-${id}`)?.scrollIntoView({ behavior: reduce ? 'instant' : 'smooth', block: 'start' })
+  document.getElementById(`title-${id}`)?.focus({ preventScroll: true })
+}
+defineExpose({ navigateTo })
+async function copyLink(story) {
+  const data = buildShareData(story, window.location.href)
+  notify(await copyText(data.url, window.navigator.clipboard) ? (story.saved_snapshot ? '元記事のリンクをコピーしました。' : '記事リンクをコピーしました。') : 'コピーできませんでした。ブラウザーの権限を確認してください。')
+  closeShare(story.id, true)
+}
+async function share(story) {
+  const result = await shareArticle(story, window.location.href, window.navigator)
+  if (result !== 'cancelled') notify({ shared: '共有しました。', copied: '共有文をコピーしました。', failed: '共有できませんでした。リンクのコピーをお試しください。' }[result])
+  closeShare(story.id, true)
 }
 function observeStories() {
   observer?.disconnect()
   document.querySelectorAll('[data-index]').forEach(el => observer?.observe(el))
 }
 watch(() => props.stories, async () => {
-  active.value = 0
-  expandedComments.value = new Set()
+  if (!props.stories.some(story => story.id === activeId.value)) activeId.value = props.stories[0]?.id ?? null
   await nextTick()
   observeStories()
 })
 onMounted(() => {
+  nativeShare.value = typeof window.navigator.share === 'function'
+  document.addEventListener('pointerdown', outsideShare)
   observer = new IntersectionObserver(entries => {
-    for (const entry of entries) if (entry.isIntersecting) active.value = Number(entry.target.dataset.index)
+    const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+    if (visible.length) activeId.value = visible[0].target.dataset.storyId
   }, { rootMargin: '-15% 0px -45% 0px', threshold: 0 })
   observeStories()
 })
-onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.body.style.overflow = '' })
+onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.removeEventListener('pointerdown', outsideShare); document.body.style.overflow = '' })
 </script>
 
 <template>
   <div class="desktop-sky" aria-hidden="true"><span class="sky-star">✦</span><span class="sky-star">✧</span><span class="sky-star">✦</span></div>
-  <a href="#story-0" class="skip-link">ニュースへ進む</a>
+  <a :href="stories.length ? `#story-${stories[0].id}` : '#feed-content'" class="skip-link">ニュースへ進む</a>
   <div class="reader-toolbar">
   <header class="app-header" :class="{ 'reader-header':saveEnabled }">
     <a class="wordmark" :href="homeUrl" aria-label="Techmin Feed ホーム">
       <img :src="brandBase + 'icon-48.png?v=2'" width="48" height="48" alt="">
       <div class="brand-type"><h1 class="brand-name">Tech<span class="brand-mint">min</span> Feed</h1><span class="brand-tagline">YOUR DAILY TECH FIX</span></div>
     </a>
+    <slot name="search" />
     <span v-if="!saveEnabled" class="preview-badge">{{ publicMode ? '先行公開' : 'LOCAL PREVIEW' }}</span>
   </header>
   <nav v-if="saveEnabled" class="reader-tabs" aria-label="記事の表示">
@@ -126,15 +168,18 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
     <a v-if="!publicMode" href="./" class="original-link">通常のフィードを見る ↗</a>
     <a v-if="!publicMode" :href="trialMode ? './catchup-preview.html' : './catchup-preview.html?trial=1'" class="original-link">{{ trialMode ? '最初の3件の見本へ ↗' : '実記事5件のお試しへ ↗' }}</a>
   </aside>
-  <main class="feed" :aria-label="`実記事${stories.length}件のフィード`">
+  <main id="feed-content" class="feed" tabindex="-1" :aria-label="`実記事${stories.length}件のフィード`">
     <div class="feed-intro"><span class="icon-label"><ArticleActionIcon :name="savedView ? 'bookmark' : 'ai'" />{{ savedView ? 'あなたの保存一覧' : 'あなたの発見フィード' }}</span><span class="feed-intro-side"><span class="feed-direction">{{ savedView ? '保存した順に' : 'スクロールで次へ ↓' }}</span><img class="feed-mascots" :src="brandBase + 'mint-loppy-game.jpg'" width="74" height="40" alt="ミントとロッピー"></span></div>
     <p v-if="storageWarning" class="storage-warning" role="alert">{{ storageWarning }}</p>
     <p v-if="savedView" class="saved-help">このブラウザー内だけに保存します。端末間の同期はありません。ブラウザーの保存データを消すと、記事の保存も失われます。</p>
+    <slot name="filters" />
+    <slot name="empty">
     <section v-if="savedView && !stories.length && !legacySaved.length" class="saved-empty">
       <ArticleActionIcon name="bookmark" /><h2>保存した記事はまだありません</h2>
       <p>気になる記事の「保存する」を押すと、ここから読み返せます。</p>
       <button @click="changeView('feed')">発見フィードへ</button>
     </section>
+    </slot>
     <nav v-if="!publicMode" class="comparison-nav" aria-label="同じ画面で内容を比較">
       <a href="./catchup-preview.html?trial=1" :aria-current="trialMode ? 'page' : undefined">見本の5件</a>
       <a href="./catchup-preview.html?gemini=1" :aria-current="generatedMode ? 'page' : undefined">Geminiの実生成</a>
@@ -144,18 +189,19 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
     <p v-if="trialMode && !publicMode" class="trial-banner">実記事5件の見本 · このチャットで生成<br><small>このページの内容はGeminiの出力ではありません</small></p>
     <template v-if="!savedView">
       <details v-if="publicMode && edition" class="edition-status">
-        <summary><span class="icon-label"><ArticleActionIcon name="refresh" />{{ edition.generated ? `記事追加：${edition.updated}` : `見本${stories.length}件を表示中` }}</span><span class="edition-detail-label">更新の詳細</span></summary>
-        <div class="edition-details"><p>朝6時までの更新を目標に、前夜23:17と午前0:17に実行を予約しています。合格した記事を1日最大3件追加します。開始の遅れや生成の失敗により、朝6時までに追加できない場合があります。</p><p>{{ edition.message }}<br>更新確認：{{ edition.checked }}</p><p>{{ edition.generated ? '説明・図・会話はAI生成です。事実は元記事でご確認ください。' : '初回の生成が通るまでは、2026/10/24の見本5件を表示します。' }}</p></div>
+        <summary><span class="icon-label"><ArticleActionIcon name="refresh" />{{ edition.additions?.label || (edition.generated ? `記事追加：${edition.updated}` : `見本${edition.count ?? stories.length}件を表示中`) }}</span><span class="edition-detail-label">更新の詳細</span></summary>
+        <div class="edition-details"><p>毎朝の更新を目指して、1日最大3件を追加します。</p><p v-if="edition.additions && !edition.additions.complete">以前の追加記録が揃っていないため、確認できた件数を表示しています。</p><p v-if="edition.message">{{ edition.message }}</p><p>更新確認：{{ edition.checked }}</p><slot name="offline-status" /><p v-if="!edition.generated">初回の生成が通るまでは、2026/10/24の見本5件を表示します。</p></div>
       </details>
       <p v-else-if="publicMode" class="trial-banner">まずは5件から、先行公開<br><small>2026/10/24時点の固定記事です。コメントはAIによる架空の会話。ニュースの自動更新は準備中です。</small></p>
     </template>
-    <article v-for="(story, index) in stories" :id="`story-${index}`" :key="story.id" :data-index="index" class="story" :class="story.theme" :aria-labelledby="`title-${story.id}`">
+    <article v-for="(story, index) in stories" :id="`story-${story.id}`" :key="story.id" :data-index="index" :data-story-id="story.id" class="story" :class="story.theme" :aria-labelledby="`title-${story.id}`">
       <div class="story-top">
         <span class="publisher-avatar" aria-hidden="true"><TopicSticker :name="topicIcon(story)" /></span>
         <div class="publisher"><strong>{{ story.source }}</strong><span class="topic"><span class="topic-tag">{{ story.category }}</span><span class="topic-date">{{ story.date }}</span></span></div>
         <span class="number">{{ String(index + 1).padStart(2, '0') }} / {{ countLabel }}</span>
       </div>
-      <h2 :id="`title-${story.id}`">{{ story.title }}</h2>
+      <h2 :id="`title-${story.id}`" tabindex="-1">{{ story.title }}</h2>
+      <p v-if="readUrls.has(story.url)" class="read-badge">✓ 読んだ</p>
       <p v-if="story.saved_snapshot" class="snapshot-note icon-label"><ArticleActionIcon name="bookmark" />保存時の内容 · 現在のフィード掲載外</p>
       <p class="lead">{{ story.lead }}</p>
       <StoryDiagram :story="story" />
@@ -190,8 +236,16 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
         </div>
       </section>
       <div class="actions">
+        <button v-if="readEnabled" :id="`read-${story.id}`" :aria-pressed="readUrls.has(story.url)" @click="emit('toggle-read', story)"><ArticleActionIcon name="check" /><span class="action-label">{{ readUrls.has(story.url) ? '未読に戻す' : '読んだ' }}</span></button>
         <button v-if="saveEnabled" class="save-story" :aria-pressed="isSaved(story)" :aria-label="(isSaved(story) ? '保存を解除：' : '保存する：') + story.title.replace('\n', '')" @click="toggleSave(story)"><ArticleActionIcon name="bookmark" /><span class="action-label">{{ isSaved(story) ? '保存済み' : '保存する' }}</span></button>
         <button v-if="publicMode" :id="'ask-' + story.id" class="ask-story" :aria-label="'AIに聞く：' + story.title.replaceAll('\n', '')" @click="openAsk(story, $event)"><ArticleActionIcon name="ai" /><span class="action-label">AIに聞く</span></button>
+        <div v-if="shareEnabled" class="share-action" @keydown.esc.stop.prevent="closeShare(story.id, true)" @focusout="leaveShare">
+          <button :id="`share-${story.id}`" :aria-expanded="sharing === story.id" :aria-controls="`share-options-${story.id}`" @click="toggleShare(story)"><ArticleActionIcon name="external" /><span class="action-label">シェア</span></button>
+          <div v-if="sharing === story.id" :id="`share-options-${story.id}`" class="share-options" role="group" aria-label="この記事をシェア">
+            <button :id="`copy-share-${story.id}`" @click="copyLink(story)"><ArticleActionIcon name="copy" />リンクをコピー</button>
+            <button @click="share(story)"><ArticleActionIcon name="external" />{{ nativeShare ? 'ほかのアプリで共有' : '共有文をコピー' }}</button>
+          </div>
+        </div>
       </div>
       <p v-if="index === stories.length - 1" class="end-note">ひとまずここまで。どの会話が気になった？</p>
     </article>
@@ -201,14 +255,15 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
       <div v-for="item in legacySaved" :key="item.url" class="legacy-saved-card">
         <a :href="item.url" target="_blank" rel="noopener noreferrer">{{ item.article.title }} ↗</a>
         <span>{{ item.article.source }}</span>
+        <button v-if="readEnabled" :aria-pressed="readUrls.has(item.url)" @click="emit('toggle-read', item.article)">{{ readUrls.has(item.url) ? '未読に戻す' : '読んだ' }}</button>
         <button class="ask-story icon-label" :aria-label="'AIに聞く：' + item.article.title" @click="openAsk(item.article, $event)"><ArticleActionIcon name="ai" />AIに聞く</button>
         <button :aria-label="'保存を解除：' + item.article.title" @click="emit('remove-legacy', item.article)">保存を解除</button>
       </div>
     </section>
     <footer v-if="!publicMode">ローカル試作 · {{ generatedMode ? '取得済みの実生成結果を表示・継続更新は未接続' : '自動収集・自動生成は未接続' }}<br><a href="./catchup-preview.html">最初の3件の見本へ</a><br><a href="./">通常のフィードへ戻る</a></footer>
-    <footer v-if="publicMode">Techmin Feed{{ edition ? ` · 記事追加：${edition.updated}` : ' · 2026/10/24版' }}<br>記事の事実・利用条件はリンク先でご確認ください。<br>コメントは実在する人の投稿ではありません。</footer>
+    <footer v-if="publicMode"><slot v-if="savedView" name="offline-status" />Techmin Feed{{ edition ? ` · 記事追加：${edition.updated}` : ' · 2026/10/24版' }}<br>記事の事実・利用条件はリンク先でご確認ください。<br>コメントは実在する人の投稿ではありません。</footer>
   </main>
   <nav class="progress" aria-label="ニュースの位置"><button v-for="(story, index) in stories" :key="story.id" :aria-label="`${index + 1}件目：${story.category}`" :aria-current="active === index ? 'step' : undefined" @click="go(index)"><span></span></button></nav>
-  <div class="toast" role="status">{{ notice }}</div>
+  <div class="toast" :class="{ 'toast-actionable': !!$slots.feedback }" role="status"><slot name="feedback">{{ notice }}</slot></div>
   <AskAiDialog v-if="asking" :story="asking" v-model:context="askContext" :return-focus="askReturnFocus" @close="asking = null" />
 </template>
