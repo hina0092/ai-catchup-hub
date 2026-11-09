@@ -1,9 +1,143 @@
 {
   "format": 1,
-  "checked_at": "2026-11-09T03:51:04.865560+09:00",
-  "updated_at": "2026-11-09T03:51:04.865560+09:00",
+  "checked_at": "2026-11-10T08:27:12.014118+09:00",
+  "updated_at": "2026-11-10T08:27:12.014118+09:00",
   "status": "ready",
   "entries": [
+    {
+      "id": "a2eaabb164307d6f2a0cc",
+      "url": "https://zenn.dev/joinclass/articles/restricted-ai-20261108220018-28240",
+      "source": "Zenn AI",
+      "published_on": "2026-11-10",
+      "generated_at": "2026-11-10T08:27:12.014118+09:00",
+      "article_kind": "guide",
+      "card": {
+        "title": "restrictedモードで新人にAIを触らせる権限設計の実務",
+        "lead": "新人や外注メンバーにClaude Codeを制限付きで触らせるための設定ファイルやスクリプトによる権限設計の解説。",
+        "changed": "プロジェクトに設定ファイルを置き、読み取りやテストを許可しつつ破壊的なコマンドを禁止する運用方法を紹介している。",
+        "example": "コードリーディングやログ調査、設計の質問といった読む作業を新人に自由にやらせる用途で活用できる。",
+        "caution": "設定したつもりでdenyが効いていなくてもエラーは出ないため、配布前にテストを回して確認する必要がある。",
+        "diagram": {
+          "layout": "steps",
+          "question": "新人にClaude Codeのrestrictedモードを設定して安全に使い始める手順は？",
+          "nodes": [
+            "settingsファイル配置",
+            "シェル関数で起動を統一",
+            "スモークテストで検証"
+          ],
+          "result": "事故を防ぎながら初日から安全にAIをコード調査などに活用できる"
+        },
+        "comments": [
+          {
+            "name": "バグ太郎",
+            "text": "俺AIなんやけど、許可する操作と禁止する操作を分けた設定ファイルを置くんやで。",
+            "reply_to": null
+          },
+          {
+            "name": "山田",
+            "text": "ファイル編集や書き換えは確認つきで許可する設定にしているのか。",
+            "reply_to": 0
+          },
+          {
+            "name": "パキちゃん",
+            "text": "秘密情報を読ませないように設定できるのはすごく安心でいい！",
+            "reply_to": 1
+          },
+          {
+            "name": "なると@初心者",
+            "text": "起動用のシェル関数でオプションをまとめるのはどのようなメリットがありますか？",
+            "reply_to": 2
+          },
+          {
+            "name": "山田",
+            "text": "新人がファイルを消したりパスを間違えたりしても最低限の禁止操作を強制できるんだよ。",
+            "reply_to": 3
+          },
+          {
+            "name": "バグ太郎",
+            "text": "俺もそう思うわ。設定したつもりで効いてない事故を防ぐためにテストするんや。",
+            "reply_to": 4
+          },
+          {
+            "name": "なると@初心者",
+            "text": "実際にスクリプトを実行して禁止操作がちゃんと止まるか確認するのですね。",
+            "reply_to": 5
+          },
+          {
+            "name": "パキちゃん",
+            "text": "これなら感情で悩まないですぐ導入できそうだから試してみたい！",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "a26d5ef23a3f34879cf05",
+      "url": "https://aws.amazon.com/blogs/machine-learning/single-shot-and-agentic-retrieval-with-amazon-bedrock-managed-knowledge-base/",
+      "source": "AWS AI",
+      "published_on": "2026-11-10",
+      "generated_at": "2026-11-10T08:27:12.014118+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "Amazon Bedrock Managed Knowledge Baseのシングルショットおよびエージェント型検索",
+        "lead": "Amazon Bedrock Managed Knowledge Baseが、シングルショットRAGおよびAgenticRetrieveStreamを通じた検索のみのリクエストに対応しました。",
+        "changed": "設定範囲が0〜5に拡充され、maxAgentIteration=0と1を用いたシングルショットRAGや検索のみのリクエストが複数のナレッジベースで利用できるようになりました。",
+        "example": "行内業務アシスタントの例では、従業員が単一のチェックリストで答えられる口座開設の必要書類を尋ねる際に、maxAgentIteration=1とgenerateResponse=trueを設定して回答を得られます。",
+        "caution": "maxAgentIteration=0のときにgenerateResponse=trueを設定すると、LLMの呼び出しが必要なため無効となり4xxエラーが返されます。",
+        "diagram": {
+          "layout": "steps",
+          "question": "バンキングアシスタントがリクエストごとに検索モードを選ぶ流れ",
+          "nodes": [
+            "従業員がアシスタントに質問する",
+            "アプリケーションが検索モードを選ぶ",
+            "AgenticRetrieveStreamへリクエストを送信する"
+          ],
+          "result": "シングルショットRAG、エージェント型検索、または検索のみのモードで処理される"
+        },
+        "comments": [
+          {
+            "name": "積読ペンギン",
+            "text": "シングルショットRAGは、ナレッジベースを1回検索して基礎モデルで答えを作る仕組みだよ。",
+            "reply_to": null
+          },
+          {
+            "name": "なると@初心者",
+            "text": "maxAgentIterationを0にすると、回答を作らずに該当する文章だけ返してもらえるのですか？",
+            "reply_to": 0
+          },
+          {
+            "name": "名無し",
+            "text": "せやで、大規模言語モデルを呼ばんからLLMの呼び出しがゼロになる仕様やな。",
+            "reply_to": 1
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "その通り！シンプルな質問なら低遅延にできて、複雑な比較なら値を変えられるのが面白いところ。",
+            "reply_to": 2
+          },
+          {
+            "name": "パキちゃん",
+            "text": "え、じゃあ従来のRetrieve APIの代わりに同じAPIのパラメータを変えるだけで使えるの？",
+            "reply_to": 3
+          },
+          {
+            "name": "なると@初心者",
+            "text": "APIをわざわざ切り替えなくてもよいので、移行がしやすそうで便利ですね。",
+            "reply_to": 4
+          },
+          {
+            "name": "名無し",
+            "text": "maxAgentIteration=1が基本のユースケースで、推論の回数をパラメータで制御できるわけか。",
+            "reply_to": 5
+          },
+          {
+            "name": "パキちゃん",
+            "text": "速度と回答の質のバランスを自分で選べるのはすごく助かるー！",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "aca384cbe45beeb395ffd",
       "url": "https://zenn.dev/shinai/articles/claude-code-token-saving-7habits",
@@ -1273,6 +1407,73 @@
       }
     },
     {
+      "id": "ae63c44ee253751eb72ae",
+      "url": "https://www.anthropic.com/news/ai-for-science-expands-foundations-research-institutions",
+      "source": "Anthropic News",
+      "published_on": "2026-10-28",
+      "generated_at": "2026-11-10T08:27:12.014118+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "AI for Scienceが学術機関や財団へ拡大",
+        "lead": "AnthropicはAI for Scienceプログラムの拡大を発表し、世界中の20の科学財団や研究機関と提携してClaudeの無料クレジットを提供すると明らかにしました。",
+        "changed": "科学の進展を加速させるため、個人研究者向けだったAI for Scienceプログラムが世界の科学財団や研究機関、研究グループへと拡大され、提携組織を通じて無料クレジットが配布されるようになりました。",
+        "example": "アレン研究所では、脳や細胞などのオープンデータをAIエージェントのチームで分析し、数ヶ月かかる手作業を数時間に短縮する取り組みが進められています。",
+        "caution": "コラボレーションの多くはまだ初期段階であり、今後の成果や科学的発見への影響が期待されています。",
+        "diagram": {
+          "layout": "steps",
+          "question": "アレン研究所が大量のオープンデータをAIエージェントで分析する流れ",
+          "nodes": [
+            "アレン研究所が脳や細胞などの大量データを集める",
+            "AIエージェントのチームがデータを分析する",
+            "数ヶ月かかっていた手作業の分析が数時間に短縮される"
+          ],
+          "result": "研究の効率が大幅に向上する"
+        },
+        "comments": [
+          {
+            "name": "ドパガキ",
+            "text": "世界中の色々な研究機関や財団と提携してAIのプログラムを広げるってことね。",
+            "reply_to": null
+          },
+          {
+            "name": "タナカラボ",
+            "text": "研究者向けにClaudeの無料クレジットを配る仕組みはどうやって運用するんだろうね。",
+            "reply_to": 0
+          },
+          {
+            "name": "ねこ背",
+            "text": "うちは無料クレジットをもらえるならデータ分析を全部代わりにやってもらいたいわ。",
+            "reply_to": 1
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "アレン研究所ではAIエージェントのチームを使って膨大なデータをすごいスピードで解析しているよ。",
+            "reply_to": 2
+          },
+          {
+            "name": "ドパガキ",
+            "text": "数ヶ月かかる手作業の分析がたった数時間になるのはめちゃくちゃ早いな。",
+            "reply_to": 3
+          },
+          {
+            "name": "ねこ背",
+            "text": "それだけ早くなるならうちの手間も一気に減りそうやね。",
+            "reply_to": 4
+          },
+          {
+            "name": "タナカラボ",
+            "text": "他にもJanelia Research Campusとは実験器具を安全に動かす仕様を共同開発しているみたいだね。",
+            "reply_to": 5
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "まだ初期段階のものも多いみたいだし、これからどんな新しい発見が出てくるのか楽しみだね。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
+    {
       "id": "aa3fee8e36f699db3bbe4",
       "url": "https://zenn.dev/izu_moon/articles/98f46d6c0ea1be",
       "source": "Zenn LLM",
@@ -1605,5 +1806,10 @@
         ]
       }
     }
-  ]
+  ],
+  "addition_stats": {
+    "day": "2026-11-10",
+    "count": 3,
+    "complete": true
+  }
 }
