@@ -1,9 +1,76 @@
 {
   "format": 1,
-  "checked_at": "2026-11-10T08:27:12.014118+09:00",
-  "updated_at": "2026-11-10T08:27:12.014118+09:00",
+  "checked_at": "2026-11-11T05:51:03.414365+09:00",
+  "updated_at": "2026-11-11T05:51:03.414365+09:00",
   "status": "ready",
   "entries": [
+    {
+      "id": "ac0101f36ad82bf9132fd",
+      "url": "https://blog.google/products-and-platforms/platforms/android/gemini-intelligence-november-features-devices/",
+      "source": "Google AI",
+      "published_on": "2026-11-11",
+      "generated_at": "2026-11-11T05:51:03.414365+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "Gemini Intelligenceの新機能と対応端末の拡大",
+        "lead": "motorola signature 27やPixel 10シリーズへGemini Intelligenceが展開され、新しい機能が追加されます。",
+        "changed": "Gemini Intelligenceの新機能として、プロンプトでカスタムウィジェットを作れるCreate My Widgetなどが発表され、対応端末も拡大します。",
+        "example": "Create My Widgetを使って旅行のダッシュボードや月間支出トラッカーなどを自分でデザインできます。",
+        "caution": "Create My Widgetは今後数週間かけて順次ロールアウトされる予定です。",
+        "diagram": {
+          "layout": "steps",
+          "question": "プロンプトからカスタムウィジェットを作成して表示するまでの流れは？",
+          "nodes": [
+            "言葉で作成内容を指示する",
+            "Gmailやカレンダーの情報を取得する",
+            "ホーム画面にカスタムウィジェットを表示する"
+          ],
+          "result": "必要な情報がひと目でわかるオリジナルのウィジェットをホーム画面に配置できる"
+        },
+        "comments": [
+          {
+            "name": "パキちゃん",
+            "text": "motorola signature 27でも使えるようになるんだ！",
+            "reply_to": null
+          },
+          {
+            "name": "ねこ背",
+            "text": "プロンプトだけでカスタムウィジェット作れるってほんま？コードいらんねやな。",
+            "reply_to": 0
+          },
+          {
+            "name": "takumi",
+            "text": "ノーコードでホーム画面を最適化できるのはプロダクティビティ向上に直結するね。",
+            "reply_to": 1
+          },
+          {
+            "name": "タナカラボ",
+            "text": "Device Assistanceで端末の整理や設定の確認もお願いできるようになるみたいだよ。",
+            "reply_to": 2
+          },
+          {
+            "name": "パキちゃん",
+            "text": "Android Autoでの提案機能も便利そう！ピラティスの場所をすぐ送れたら最高じゃん。",
+            "reply_to": 3
+          },
+          {
+            "name": "ねこ背",
+            "text": "タスク自動化の対応地域に日本も入ってるやん。助かるわあ。",
+            "reply_to": 4
+          },
+          {
+            "name": "takumi",
+            "text": "Ramblerも対応端末が広がってリアルタイムでテキスト化できるのはシナジー高い。",
+            "reply_to": 5
+          },
+          {
+            "name": "タナカラボ",
+            "text": "順次ロールアウトされるみたいだから、手元に届くのをゆっくり待つとしよう。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "a2eaabb164307d6f2a0cc",
       "url": "https://zenn.dev/joinclass/articles/restricted-ai-20261108220018-28240",
@@ -1808,8 +1875,8 @@
     }
   ],
   "addition_stats": {
-    "day": "2026-11-10",
-    "count": 3,
+    "day": "2026-11-11",
+    "count": 1,
     "complete": true
   }
 }
