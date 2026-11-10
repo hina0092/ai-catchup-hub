@@ -47,11 +47,10 @@ function closeShare(id, returnFocus = false) {
   sharing.value = null
   if (returnFocus) document.getElementById(`share-${id}`)?.focus({ preventScroll: true })
 }
+// Do not dismiss on focusout: iOS can report relatedTarget=null inside the
+// menu before click, removing the selected button before its handler runs.
 function outsideShare(event) {
   if (!event.target.closest?.('.share-action')) sharing.value = null
-}
-function leaveShare(event) {
-  if (!event.currentTarget.contains(event.relatedTarget)) sharing.value = null
 }
 function sourceDomain(url) { return new URL(url).hostname }
 function replyLabel(story, parent) {
@@ -103,14 +102,25 @@ function navigateTo(id) {
 }
 defineExpose({ navigateTo })
 async function copyLink(story) {
-  const data = buildShareData(story, window.location.href)
-  notify(await copyText(data.url, window.navigator.clipboard) ? (story.saved_snapshot ? '元記事のリンクをコピーしました。' : '記事リンクをコピーしました。') : 'コピーできませんでした。ブラウザーの権限を確認してください。')
-  closeShare(story.id, true)
+  try {
+    const data = buildShareData(story, window.location.href)
+    if (!await copyText(data.url, window.navigator.clipboard)) throw new Error('copy failed')
+    notify(story.saved_snapshot ? '元記事のリンクをコピーしました。' : '記事リンクをコピーしました。')
+  } catch {
+    notify('コピーできませんでした。ブラウザーの権限を確認してください。')
+  } finally {
+    closeShare(story.id, true)
+  }
 }
 async function share(story) {
-  const result = await shareArticle(story, window.location.href, window.navigator)
-  if (result !== 'cancelled') notify({ shared: '共有しました。', copied: '共有文をコピーしました。', failed: '共有できませんでした。リンクのコピーをお試しください。' }[result])
-  closeShare(story.id, true)
+  try {
+    const result = await shareArticle(story, window.location.href, window.navigator)
+    notify({ shared: '共有しました。', copied: '共有文をコピーしました。', cancelled: '共有をキャンセルしました。', failed: '共有できませんでした。リンクのコピーをお試しください。' }[result])
+  } catch {
+    notify('共有できませんでした。リンクのコピーをお試しください。')
+  } finally {
+    closeShare(story.id, true)
+  }
 }
 function observeStories() {
   observer?.disconnect()
@@ -239,7 +249,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(noticeTimer); document.
         <button v-if="readEnabled" :id="`read-${story.id}`" :aria-pressed="readUrls.has(story.url)" @click="emit('toggle-read', story)"><ArticleActionIcon name="check" /><span class="action-label">{{ readUrls.has(story.url) ? '未読に戻す' : '読んだ' }}</span></button>
         <button v-if="saveEnabled" class="save-story" :aria-pressed="isSaved(story)" :aria-label="(isSaved(story) ? '保存を解除：' : '保存する：') + story.title.replace('\n', '')" @click="toggleSave(story)"><ArticleActionIcon name="bookmark" /><span class="action-label">{{ isSaved(story) ? '保存済み' : '保存する' }}</span></button>
         <button v-if="publicMode" :id="'ask-' + story.id" class="ask-story" :aria-label="'AIに聞く：' + story.title.replaceAll('\n', '')" @click="openAsk(story, $event)"><ArticleActionIcon name="ai" /><span class="action-label">AIに聞く</span></button>
-        <div v-if="shareEnabled" class="share-action" @keydown.esc.stop.prevent="closeShare(story.id, true)" @focusout="leaveShare">
+        <div v-if="shareEnabled" class="share-action" @keydown.esc.stop.prevent="closeShare(story.id, true)">
           <button :id="`share-${story.id}`" :aria-expanded="sharing === story.id" :aria-controls="`share-options-${story.id}`" @click="toggleShare(story)"><ArticleActionIcon name="external" /><span class="action-label">シェア</span></button>
           <div v-if="sharing === story.id" :id="`share-options-${story.id}`" class="share-options" role="group" aria-label="この記事をシェア">
             <button :id="`copy-share-${story.id}`" @click="copyLink(story)"><ArticleActionIcon name="copy" />リンクをコピー</button>
