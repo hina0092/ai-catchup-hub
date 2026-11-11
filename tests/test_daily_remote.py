@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 from unittest.mock import Mock, patch
+from urllib.error import HTTPError
 
 from collector.daily_cards import empty_feed
 from tools.ai_cache import git
@@ -16,6 +17,55 @@ from collector.daily_cards import generate
 
 
 class DailyRemoteTests(TestCase):
+    def test_split_runs_restore_reservations_after_503_and_skip_collection_after_three(self):
+        requested = []
+        def send(model, key, article):
+            requested.append(article['id'])
+            if len(requested) == 1:
+                raise HTTPError('https://example.com', 503, 'unavailable', {}, None)
+            return provider(model, key, article)
+        def mocked_generator(*args, **kwargs):
+            return generate(*args, **kwargs, provider=send, reader=Mock(return_value=EXCERPT), sleep=Mock())
+        collect = Mock(return_value=([row(i) for i in range(5)], 1))
+        store = self.store
+        statuses = []
+        for index in range(4):
+            if index:
+                store = setup(self.root / f'runner-{index}', str(self.remote))
+            feed = run(store, {**CONFIG, 'requests_per_run': 1}, self.root / f'feed-{index}.json',
+                self.root / f'ledger-{index}', live=True, env=ENV, now=NOW,
+                collector=collect, generator=mocked_generator)
+            statuses.append(feed['status'])
+            self.assertFalse(store.state['active'])
+        self.assertEqual(statuses, ['provider_error', 'ready', 'ready', 'ready'])
+        self.assertEqual(collect.call_count, 3)
+        self.assertEqual(len(set(requested)), 3)
+        self.assertEqual(len(store.state['files']), 3)
+        self.assertEqual(len(feed['entries']), 2)
+        self.assertEqual(feed['addition_stats'], dict(day=NOW.date().isoformat(), count=2, complete=True))
+        self.assertFalse((self.root / 'ledger-3').exists())
+
+    def test_exhausted_day_and_429_stop_export_without_collection_or_ledger_writes(self):
+        feed = {**empty_feed(), 'checked_at': NOW.isoformat(), 'status': 'provider_error',
+                'addition_stats': dict(day=NOW.date().isoformat(), count=0, complete=True)}
+        persist_feed(self.store, feed)
+        for stopped in (False, True):
+            self.store.state['files'] = ({f'{NOW.date().isoformat()}.stop': None} if stopped else {
+                f'{NOW.date().isoformat()}-trial{i}-abcdef123456.json': dict(id=f'trial{i}', fingerprint='abcdef123456'+'0'*52, version=2)
+                for i in range(3)})
+            self.store.save()
+            forbidden = Mock(side_effect=AssertionError('do not collect or generate after daily stop'))
+            with patch.object(self.store, 'begin', side_effect=AssertionError('no active marker write')):
+                with patch.object(self.store, 'save', side_effect=AssertionError('no persistence')):
+                    output = self.root / f'skip-{stopped}.json'
+                    result = run(self.store, {**CONFIG, 'requests_per_run': 1}, output,
+                        self.root / f'unused-{stopped}', live=True, now=NOW,
+                        collector=forbidden, generator=forbidden)
+            self.assertEqual(result, feed)
+            self.assertEqual(json.loads(output.read_text(encoding='utf-8')), feed)
+            self.assertFalse((self.root / f'unused-{stopped}').exists())
+            forbidden.assert_not_called()
+
     def setUp(self):
         self.temp = TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
