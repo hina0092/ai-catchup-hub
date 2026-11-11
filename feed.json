@@ -1,9 +1,76 @@
 {
   "format": 1,
-  "checked_at": "2026-11-11T05:51:03.414365+09:00",
-  "updated_at": "2026-11-11T05:51:03.414365+09:00",
+  "checked_at": "2026-11-12T06:26:35.334313+09:00",
+  "updated_at": "2026-11-12T06:26:35.334313+09:00",
   "status": "ready",
   "entries": [
+    {
+      "id": "ae0226e82cba17a7f63df",
+      "url": "https://aws.amazon.com/blogs/machine-learning/the-attendees-guide-to-the-aws-reinvent-2026-ai-ml-track/",
+      "source": "AWS AI",
+      "published_on": "2026-11-12",
+      "generated_at": "2026-11-12T06:26:35.334313+09:00",
+      "article_kind": "guide",
+      "card": {
+        "title": "AWS re:Invent 2026 AI/MLトラックの参加者向けガイド",
+        "lead": "AWS re:Invent 2026のAI/ML分野のセッションから、自分に合う内容を見つけるためのガイドです。",
+        "changed": "2000以上の学習セッションの中からAI/MLトラックの140を超える独自のセッションを選び、自分のニーズに合わせてスケジュールを組むことができます。",
+        "example": "AIM364セッションでは、エージェントコア上で実行される実際のAIエージェント開発アプリを例として扱います。",
+        "caution": "現地に参加できない場合でも、オンデマンドで多くのセッションを後から視聴したりキーノートをライブで見たりできます。",
+        "diagram": {
+          "layout": "steps",
+          "question": "AWS AIスタックはどのように構成されているか",
+          "nodes": [
+            "グローバルインフラのデータセンターが処理を支える",
+            "AIチップが計算処理を実行する",
+            "データ基盤がモデルやエージェントに情報を繋ぐ"
+          ],
+          "result": "インフラから準備されたAI環境を利用できる"
+        },
+        "comments": [
+          {
+            "name": "なると@初心者",
+            "text": "セッションが140以上もあるのですね。自分に合うものを探すにはどうすればよいでしょうか？",
+            "reply_to": null
+          },
+          {
+            "name": "名無し",
+            "text": "ガイドの目的がまさにそれに合わせてスケジュールを組むことやから、まずは記事を読むんやで。",
+            "reply_to": 0
+          },
+          {
+            "name": "ねこ背",
+            "text": "うち、現地に行かんでもオンデマンドで見られるなら、自分のペースで家からチェックしたいわ。",
+            "reply_to": 1
+          },
+          {
+            "name": "ドパガキ",
+            "text": "ブレイクアウトセッションの様子は後からYouTubeで見られるから助かるな。",
+            "reply_to": 2
+          },
+          {
+            "name": "なると@初心者",
+            "text": "ホワイトボードを使って参加者と対話できるチョークトークという形式もあるのですか？",
+            "reply_to": 3
+          },
+          {
+            "name": "ねこ背",
+            "text": "ワークショップなら小さなチームで実際に問題を解決するらしいからおもろそうやね。",
+            "reply_to": 4
+          },
+          {
+            "name": "名無し",
+            "text": "コードトークは専門家によるライブコーディングをそのまま見られる仕組みやな。",
+            "reply_to": 5
+          },
+          {
+            "name": "ドパガキ",
+            "text": "これだけ種類があれば自分の目的に合わせたセッションが見つかりそうだな。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "ac0101f36ad82bf9132fd",
       "url": "https://blog.google/products-and-platforms/platforms/android/gemini-intelligence-november-features-devices/",
@@ -1875,7 +1942,7 @@
     }
   ],
   "addition_stats": {
-    "day": "2026-11-11",
+    "day": "2026-11-12",
     "count": 1,
     "complete": true
   }
