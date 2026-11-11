@@ -13,7 +13,9 @@ from collector.daily_cards import (checked_feed, configuration, empty_feed, gene
 from collector.article_source import article_text
 from tests.test_card_trial import ENV, NOW, result
 
-CONFIG = json.loads((ROOT / 'collector/daily_config.json').read_text(encoding='utf-8'))
+# Existing batch regressions deliberately exercise the legacy three-per-run mode.
+CONFIG = {**json.loads((ROOT / 'collector/daily_config.json').read_text(encoding='utf-8')),
+          'requests_per_run': 3}
 EXCERPT = 'これは入力から抽出された記事本文のテストです。' * 40
 
 
@@ -27,6 +29,82 @@ def provider(model, key, article):
 
 
 class DailyCardsTests(TestCase):
+    def test_production_splits_requests_and_legacy_config_without_limit_still_batches(self):
+        config = json.loads((ROOT / 'collector/daily_config.json').read_text(encoding='utf-8'))
+        self.assertEqual((config['daily_requests'], config['requests_per_run']), (3, 1))
+        send = Mock(side_effect=provider)
+        feed = self.generate(config=config, provider=send)
+        self.assertEqual((send.call_count, len(feed['entries'])), (1, 1))
+        legacy = {key: value for key, value in CONFIG.items() if key != 'requests_per_run'}
+        self.generate(config=legacy, provider=send, feed=feed)
+        self.assertEqual(send.call_count, 3)
+        for value in (0, -1, 4, True, '1', None):
+            with self.subTest(limit=value), self.assertRaises(ValueError):
+                configuration({**CONFIG, 'requests_per_run': value})
+
+    def test_split_runs_reproduce_language_rejection_and_503_without_resending(self):
+        config = {**CONFIG, 'requests_per_run': 1}
+        requested = []
+        variants = []
+        def send(model, key, article):
+            requested.append(article['id'])
+            variants.append(article['_generation_variant'])
+            if len(requested) == 3:
+                raise HTTPError('https://private.invalid', 503, 'PRIVATE_KEY', {}, None)
+            card = provider(model, key, article)
+            if len(requested) == 2:
+                card['diagram']['nodes'][0] = 'PRIVATE_ENGLISH_ONLY'
+            return card
+        with self.assertLogs('collector.daily_cards', level='INFO') as logs:
+            first = self.generate(config=config, provider=send)
+            second = self.generate(config=config, provider=send, feed=first, now=NOW + timedelta(hours=1))
+            third = self.generate(config=config, provider=send, feed=second, now=NOW + timedelta(hours=2))
+            blocked = self.generate(config=config, provider=send, feed=third, now=NOW + timedelta(hours=3))
+        self.assertEqual(len(set(requested)), 3)
+        self.assertEqual(variants, ['short_diagram_v1', 'stable', 'stable'])
+        self.assertEqual(second['status'], 'invalid_outputs')
+        self.assertEqual(third['status'], 'provider_error')
+        self.assertEqual(blocked['status'], 'budget_limit')
+        self.assertEqual(third['entries'], first['entries'])
+        self.assertEqual(third['updated_at'], first['updated_at'])
+        self.assertEqual(third['addition_stats']['count'], 1)
+        self.assertEqual(len(list(self.ledger.glob('*.json'))), 3)
+        events = [json.loads(record.getMessage()) for record in logs.records]
+        self.assertTrue(any(e.get('field') == 'diagram.nodes.0' and e.get('reason') == 'invalid_language' for e in events))
+        self.assertTrue(any(e.get('http_status') == 503 for e in events))
+        self.assertNotIn('PRIVATE_KEY', str(logs.output))
+
+    def test_first_503_leaves_remaining_slots_for_later_runs_and_then_resets_next_day(self):
+        config = {**CONFIG, 'requests_per_run': 1}
+        first = self.generate(config=config, provider=Mock(side_effect=HTTPError('https://example.com', 503, '', {}, None)))
+        send = Mock(side_effect=provider)
+        second = self.generate(config=config, provider=send, feed=first)
+        third = self.generate(config=config, provider=send, feed=second)
+        self.generate(config=config, provider=send, feed=third)
+        self.assertEqual(send.call_count, 2)
+        self.assertEqual(len(third['entries']), 2)
+        self.assertEqual(third['addition_stats']['count'], 2)
+        self.assertEqual(len(list(self.ledger.glob('*.json'))), 3)
+        tomorrow = self.generate(config=config, provider=send, feed=third, now=NOW + timedelta(days=1))
+        self.assertEqual(send.call_count, 3)
+        self.assertEqual(tomorrow['addition_stats']['count'], 1)
+        self.assertEqual(len(list(self.ledger.glob('*.json'))), 4)
+
+    def test_split_runs_share_manual_budget_and_429_blocks_following_slots(self):
+        exclusive_json(self.ledger / f'{NOW.date().isoformat()}-manual-abcdef123456.json', {})
+        config = {**CONFIG, 'requests_per_run': 1}
+        send = Mock(side_effect=provider)
+        first = self.generate(config=config, provider=send)
+        second = self.generate(config=config, provider=send, feed=first)
+        self.generate(config=config, provider=send, feed=second)
+        self.assertEqual(send.call_count, 2)
+        tomorrow = NOW + timedelta(days=1)
+        failed = self.generate(config=config, now=tomorrow, provider=Mock(side_effect=HTTPError('https://example.com', 429, '', {}, None)))
+        self.assertEqual(failed['status'], 'rate_limit')
+        forbidden = Mock(side_effect=AssertionError('429 must stop the entire day'))
+        self.generate(config=config, now=tomorrow, provider=forbidden)
+        forbidden.assert_not_called()
+
     def test_addition_stats_accumulate_same_day_and_ignore_failed_attempts(self):
         first = self.generate(rows=[row(0)])
         self.assertEqual(first['addition_stats'], dict(day=NOW.date().isoformat(), count=1, complete=True))

@@ -38,6 +38,8 @@ DAILY_PROMPT += '\nタイトルは短く身近に。製品名の表記を変え�
 def configuration(value):
     if (not isinstance(value, dict) or type(value.get('enabled')) is not bool
             or type(value.get('daily_requests')) is not int or not 1 <= value['daily_requests'] <= 3
+            or type(value.get('requests_per_run', value.get('daily_requests'))) is not int
+            or not 1 <= value.get('requests_per_run', value['daily_requests']) <= value['daily_requests']
             or type(value.get('retained_cards')) is not int or not 5 <= value['retained_cards'] <= 30
             or type(value.get('max_age_days')) is not int or not 1 <= value['max_age_days'] <= 30
             or not isinstance(value.get('article_hosts'), list) or not value['article_hosts']
@@ -47,6 +49,14 @@ def configuration(value):
             or value.get('generation_candidate', 'off') not in ('off', 'short_diagram_v1')):
         raise ValueError('daily configuration')
     return value
+
+
+def budget_reason(used, stopped, config):
+    if stopped:
+        return 'rate_limit_stop'
+    if used >= config['daily_requests']:
+        return 'daily_budget'
+    return None
 
 
 def empty_feed():
@@ -195,9 +205,9 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
         stats = dict(day=today, count=baseline, complete=used == 0 and baseline == 0)
     output['addition_stats'] = stats
     output['status'] = 'no_new'
-    if used >= config['daily_requests'] or (ledger / f'{today}.stop').exists():
-        LOGGER.info(json.dumps(dict(event='generation_skipped', reason=
-            'rate_limit_stop' if (ledger / f'{today}.stop').exists() else 'daily_budget', used=used)))
+    blocked = budget_reason(used, (ledger / f'{today}.stop').exists(), config)
+    if blocked:
+        LOGGER.info(json.dumps(dict(event='generation_skipped', reason=blocked, used=used)))
         output['status'] = 'budget_limit'
         return output
     if (env.get('GEMINI_MODEL', MODEL) != MODEL
@@ -222,8 +232,9 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
     if not queue:
         return output
     attempts, successes = 0, 0
+    per_run = config.get('requests_per_run', config['daily_requests'])
     for candidate_index, row in enumerate(queue, 1):
-        if used >= config['daily_requests']:
+        if used >= config['daily_requests'] or attempts >= per_run:
             break
         ident = 'a' + hashlib.sha256(row['url'].encode()).hexdigest()[:20]
         if any(ledger.glob(f'{today}-{ident}-*.json')):
@@ -318,5 +329,5 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
     elif not attempts and queue:
         output['status'] = 'source_unavailable'
     LOGGER.info(json.dumps(dict(event='generation_summary', attempts=attempts, accepted=successes,
-        remaining=max(0, config['daily_requests'] - used), status=output['status'])))
+        remaining=max(0, config['daily_requests'] - used), requests_per_run=per_run, status=output['status'])))
     return checked_feed(output)

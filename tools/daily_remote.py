@@ -9,7 +9,7 @@ import re
 
 from collector.card_trial import ROOT, JST
 from collector.collect import collect
-from collector.daily_cards import checked_feed, configuration, empty_feed, generate
+from collector.daily_cards import checked_feed, configuration, empty_feed, generate, budget_reason
 from tools.ai_cache import git
 from tools.card_trial_remote import setup
 from collector.diagnostics import OperationalError, failure, stage, LOGGER
@@ -45,6 +45,16 @@ def run(store, config, output, ledger, *, live=False, env=None, now=None,
         feed = load_feed(store)
     env = dict(os.environ if env is None else env)
     now = now or datetime.now(JST)
+    if live:
+        # The validated remote ledger is authoritative. Do not fetch sources or
+        # toggle active after the day is exhausted; export the existing feed as-is.
+        today = now.astimezone(JST).date().isoformat()
+        records = store.state['files']
+        used = sum(name.startswith(f'{today}-') and name.endswith('.json') for name in records)
+        blocked = budget_reason(used, f'{today}.stop' in records, config)
+        if blocked:
+            LOGGER.info(json.dumps(dict(event='generation_skipped', reason=blocked, used=used)))
+            live = False
     if live:
         with stage('sources_load'):
             sources = json.loads((ROOT / 'collector/sources.json').read_text(encoding='utf-8'))
