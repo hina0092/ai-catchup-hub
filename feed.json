@@ -1,9 +1,76 @@
 {
   "format": 1,
-  "checked_at": "2026-11-13T06:29:02.661971+09:00",
-  "updated_at": "2026-11-13T06:29:02.661971+09:00",
+  "checked_at": "2026-11-13T07:25:16.529284+09:00",
+  "updated_at": "2026-11-13T07:25:16.529284+09:00",
   "status": "ready",
   "entries": [
+    {
+      "id": "a7eb26c45e4d2cf7ac4ce",
+      "url": "https://aws.amazon.com/blogs/machine-learning/deploy-frontier-ai-models-on-aws-trainium-with-sglang-neuron/",
+      "source": "AWS AI",
+      "published_on": "2026-11-13",
+      "generated_at": "2026-11-13T07:25:16.529284+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "AWS TrainiumでのSGLang-Neuron提供開始",
+        "lead": "SGLang-Neuronが一般公開され、AWS Deep Learning Containerから利用可能になった。",
+        "changed": "SGLang-Neuronを使うことで、AWS Trainium上でSGLangの同じインターフェースを使用してモデルのサービングや強化学習のロールアウト生成が行えるようになった。",
+        "example": "記事では、モデルサーバーへcurlコマンドで「空が青い理由を説明して」というチャット補完のリクエストを送る手順が示されている。",
+        "caution": "設定手順の詳細はSGLang-Neuronの入門ガイドを参照し、サポートされるモデルや機能はリポジトリのドキュメントを確認する必要がある。",
+        "diagram": {
+          "layout": "steps",
+          "question": "コンテナ起動からモデルサーバーの起動・リクエスト送信までの手順",
+          "nodes": [
+            "コンテナを起動する",
+            "SGLangモデルサーバーを起動する",
+            "モデルサーバーへリクエストを送信する"
+          ],
+          "result": "AWS Trainium上でSGLang-Neuronのモデルサーバーを動かして応答を得られる"
+        },
+        "comments": [
+          {
+            "name": "ドパガキ",
+            "text": "SGLang-Neuronが公開されてAWSで使えるようになったってことか。",
+            "reply_to": null
+          },
+          {
+            "name": "タナカラボ",
+            "text": "僕らはまずコンテナを起動して、手順に沿って動かすことになるね。",
+            "reply_to": 0
+          },
+          {
+            "name": "ねこ背",
+            "text": "うち、コンテナの起動コマンドを打つところから始めなかんのか。",
+            "reply_to": 1
+          },
+          {
+            "name": "takumi",
+            "text": "俺は、お馴染みのSGLangのワークフローをそのまま活かせる点が本質的だね。",
+            "reply_to": 0
+          },
+          {
+            "name": "ドパガキ",
+            "text": "サーバー起動のコマンドではモデルのパスとか色々指定するんだな。",
+            "reply_to": 3
+          },
+          {
+            "name": "タナカラボ",
+            "text": "そうだね、モデルパスや並列数などの設定を引数で渡して立ち上げる仕組みだ。",
+            "reply_to": 4
+          },
+          {
+            "name": "ねこ背",
+            "text": "設定項目は多いけど、使い慣れたインターフェースなら少しは安心やわ。",
+            "reply_to": 5
+          },
+          {
+            "name": "takumi",
+            "text": "エコシステム全体でのフィードバックを通じて、さらに機能が洗練されていくはずだ。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "a02821ceaa4ab74cff1a7",
       "url": "https://aws.amazon.com/blogs/machine-learning/four-amazon-bedrock-inference-choices-that-affect-cost/",
@@ -1939,78 +2006,11 @@
           }
         ]
       }
-    },
-    {
-      "id": "a5e09805dda87945da37a",
-      "url": "https://github.blog/ai-and-ml/github-copilot/how-to-continue-a-github-copilot-app-session-in-vs-code/",
-      "source": "GitHub Blog AI & ML",
-      "published_on": "2026-10-20",
-      "generated_at": "2026-11-02T03:57:49.836751+09:00",
-      "article_kind": "guide",
-      "card": {
-        "title": "VS CodeでGitHub Copilotアプリのセッションを続ける方法",
-        "lead": "GitHub CopilotアプリでのセッションをVS Codeで直接開き、会話やコード変更、作業コンテキストを維持したまま続けられます。",
-        "changed": "CopilotアプリのセッションをVS Codeで開くと、タスク、計画、会話のコンテキストが保持され、変更されたファイルやワークツリーもそのまま利用できるようになります。",
-        "example": "変数名の変更やラベルの調整など、VS Codeで直接ファイルを編集して手動の細かい修正を行えます。",
-        "caution": "複数のサポート対象エディタやVS Codeのインストール環境がある場合は、使用するものを選択する必要があります。",
-        "diagram": {
-          "layout": "steps",
-          "question": "CopilotアプリのセッションをVS Codeで継続する手順はどうなっていますか？",
-          "nodes": [
-            "Copilotアプリでセッションを開き作業を確認する",
-            "セッションからVS Codeを開いてワークツリーを読み込む",
-            "VS Codeのサイドバーや差分ビューで続きを確認・編集する"
-          ],
-          "result": "会話のコンテキストや変更内容を維持したまま、エディタ上での詳細なレビューやローカル検証へスムーズに移行できる"
-        },
-        "comments": [
-          {
-            "name": "ねこ背",
-            "text": "Copilotアプリの会話をそのままVS Codeに持ってこれるんか？",
-            "reply_to": null
-          },
-          {
-            "name": "バグ太郎",
-            "text": "そうやで。タスクや計画、これまでの会話コンテキストも丸ごと引き継げるんや。",
-            "reply_to": 0
-          },
-          {
-            "name": "山田",
-            "text": "最初からチャットを打ち直さなくていいのは二度手間にならなくて賢いな。",
-            "reply_to": 1
-          },
-          {
-            "name": "ねこ背",
-            "text": "複数のインストール環境がある時はどれか選ぶんやな。",
-            "reply_to": 2
-          },
-          {
-            "name": "バグ太郎",
-            "text": "アプリから開くときに使うエディタを選ぶだけで、同じワークツリーがそのまま開く仕組みや。",
-            "reply_to": 3
-          },
-          {
-            "name": "山田",
-            "text": "エディタをまたいでも同じ作業環境に直結するのはスムーズでいいな。",
-            "reply_to": 4
-          },
-          {
-            "name": "ねこ背",
-            "text": "細かいラベルの調整なんかは手動ですぐ書き換えられるんか？",
-            "reply_to": 5
-          },
-          {
-            "name": "バグ太郎",
-            "text": "せや。エディタで直接ファイルを編集して、そのままローカルテストやプルリクエストの更新まで行えるで。",
-            "reply_to": 6
-          }
-        ]
-      }
     }
   ],
   "addition_stats": {
     "day": "2026-11-13",
-    "count": 1,
+    "count": 2,
     "complete": true
   }
 }
