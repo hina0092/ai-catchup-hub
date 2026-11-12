@@ -1,9 +1,76 @@
 {
   "format": 1,
-  "checked_at": "2026-11-12T09:56:54.794513+09:00",
-  "updated_at": "2026-11-12T06:26:35.334313+09:00",
-  "status": "invalid_outputs",
+  "checked_at": "2026-11-13T06:29:02.661971+09:00",
+  "updated_at": "2026-11-13T06:29:02.661971+09:00",
+  "status": "ready",
   "entries": [
+    {
+      "id": "a02821ceaa4ab74cff1a7",
+      "url": "https://aws.amazon.com/blogs/machine-learning/four-amazon-bedrock-inference-choices-that-affect-cost/",
+      "source": "AWS AI",
+      "published_on": "2026-11-13",
+      "generated_at": "2026-11-13T06:29:02.661971+09:00",
+      "article_kind": "guide",
+      "card": {
+        "title": "Amazon Bedrockのコストに影響する4つの推論選択肢",
+        "lead": "キャッシュ期間、サービス層、推論の思考量、maxTokensが、モデルやプロンプトを変えずにコストに影響を与える仕組みを解説します。",
+        "changed": "プロンプトキャッシュの期間設定、Flexサービス層の利用、アダプティブ思考の努力量調整、maxTokensによる出力上限の設定という4つのリクエストレベルの選択肢がコストに影響します。",
+        "example": "Amazon Bedrock SamplesのノートブックやGitHubリポジトリのサンプルコードを参照して試すことができます。",
+        "caution": "選択肢の効果はモデルやワークロードに依存するため、応答メタデータ、ログ、請求データで検証する必要があります。",
+        "diagram": {
+          "layout": "steps",
+          "question": "Converse APIで1時間キャッシュをリクエストする方法は？",
+          "nodes": [
+            "Converse APIシグネチャ",
+            "cachePointにdefaultを指定",
+            "ttlを1hに設定する"
+          ],
+          "result": "モデルが対応していれば1時間のキャッシュエントリを要求できる"
+        },
+        "comments": [
+          {
+            "name": "山田",
+            "text": "プロンプトやモデルを変えなくてもコストが変わる要素があるのか。",
+            "reply_to": null
+          },
+          {
+            "name": "バグ太郎",
+            "text": "そうやで。俺が見た記事やと、キャッシュのttl設定とかもコードで指定できる仕組みになっとるわ。",
+            "reply_to": 0
+          },
+          {
+            "name": "takumi",
+            "text": "コスト最適化の意思決定において、このリクエストレベルのチューニングはROI最大化の本質だよね。",
+            "reply_to": 1
+          },
+          {
+            "name": "パキちゃん",
+            "text": "え、どのモデルでも同じ設定が使えるわけじゃないの？ ちょっと面倒くさそう……。",
+            "reply_to": 2
+          },
+          {
+            "name": "バグ太郎",
+            "text": "そこは注意や。Nova 2 LiteやとFlex層が使えたけど、Claudeのモデルみたいに対応してないやつもあるで。",
+            "reply_to": 3
+          },
+          {
+            "name": "パキちゃん",
+            "text": "思考の努力量も調整できるんだ！ルーティン作業なら低めにしたいかも。",
+            "reply_to": 4
+          },
+          {
+            "name": "山田",
+            "text": "effortを下げて精度が落ちたら意味ないけど、タスクによってテストして決める感じか。",
+            "reply_to": 5
+          },
+          {
+            "name": "takumi",
+            "text": "あらかじめ出力トークンの分布を観測して上限のフェンスを設けるアプローチは、スケールさせる上でスマートだね。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "ae0226e82cba17a7f63df",
       "url": "https://aws.amazon.com/blogs/machine-learning/the-attendees-guide-to-the-aws-reinvent-2026-ai-ml-track/",
@@ -1942,7 +2009,7 @@
     }
   ],
   "addition_stats": {
-    "day": "2026-11-12",
+    "day": "2026-11-13",
     "count": 1,
     "complete": true
   }
