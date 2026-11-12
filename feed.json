@@ -1,8 +1,8 @@
 {
   "format": 1,
-  "checked_at": "2026-11-12T06:26:35.334313+09:00",
+  "checked_at": "2026-11-12T09:56:54.794513+09:00",
   "updated_at": "2026-11-12T06:26:35.334313+09:00",
-  "status": "ready",
+  "status": "invalid_outputs",
   "entries": [
     {
       "id": "ae0226e82cba17a7f63df",
