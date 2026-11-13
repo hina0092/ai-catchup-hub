@@ -1,9 +1,76 @@
 {
   "format": 1,
-  "checked_at": "2026-11-13T07:25:16.529284+09:00",
-  "updated_at": "2026-11-13T07:25:16.529284+09:00",
+  "checked_at": "2026-11-14T05:55:01.800646+09:00",
+  "updated_at": "2026-11-14T05:55:01.800646+09:00",
   "status": "ready",
   "entries": [
+    {
+      "id": "a091099d846f62db22458",
+      "url": "https://aws.amazon.com/blogs/machine-learning/cost-optimizing-assemblyai-speech-to-text-inference-on-aws-with-amazon-ec2-spot/",
+      "source": "AWS AI",
+      "published_on": "2026-11-14",
+      "generated_at": "2026-11-14T05:55:01.800646+09:00",
+      "article_kind": "guide",
+      "card": {
+        "title": "Amazon EC2 SpotでAssemblyAIの推論コストを最適化する方法",
+        "lead": "Amazon ECSとEC2 Spotインスタンス、SQSによるキューベースの再試行機構を組み合わせて、音声認識推論のコストを大幅に削減する仕組みです。",
+        "changed": "Amazon ECSのキャパシティプロバイダを利用し、複数のNVIDIA GPUインスタンスファミリー（g4dn、g5、g6）のSpotインスタンスとオンデマンドインスタンスを混合してフリートを構成しています。",
+        "example": "バッチ処理やニアリアルタイムのAIワークロードを持つチームが、コスト効率の高いSpotインフラを活用するためのパターンとして応用できます。",
+        "caution": "Amazon EC2は容量が必要になると2分前の通知でSpotインスタンスを回収するため、中断に耐えるアーキテクチャの設計が求められます。",
+        "diagram": {
+          "layout": "steps",
+          "question": "Spotインスタンスの中断通知を受けたときの処理の流れはどうなるか？",
+          "nodes": [
+            "Spotインスタンスが2分前の中断通知を受信する",
+            "AWS Lambdaのハンドラーが実行中のジョブを確認する",
+            "未完了のジョブをメインのSQSキューへ戻す"
+          ],
+          "result": "別の健全なECSタスクがキューからジョブを拾い上げて推論を完了させる"
+        },
+        "comments": [
+          {
+            "name": "ドパガキ",
+            "text": "これ、GPUのインスタンスをうまいこと混ぜて安く動かせるってことか。",
+            "reply_to": null
+          },
+          {
+            "name": "takumi",
+            "text": "g4dnやg5、g6の複数ファミリーへのダイバーシティがスケーラビリティの鍵だね。",
+            "reply_to": 0
+          },
+          {
+            "name": "パキちゃん",
+            "text": "コストが70パーセントも削減できるなんて、めっちゃすごいじゃん！",
+            "reply_to": 1
+          },
+          {
+            "name": "バグ太郎",
+            "text": "俺もそう思うで。キューベースの再試行で中断を日常的なイベントにしてるんや。",
+            "reply_to": 2
+          },
+          {
+            "name": "ドパガキ",
+            "text": "でも途中でインスタンスが消されたりしたら、データが消えたりしないのか？",
+            "reply_to": 3
+          },
+          {
+            "name": "バグ太郎",
+            "text": "2分前に通知が来るから、間に合わん分はキューに戻して別のワーカーに任せるんやで。",
+            "reply_to": 4
+          },
+          {
+            "name": "takumi",
+            "text": "EventBridgeとLambdaが連動してインフラストラクチャをレジリエントに保つわけだ。",
+            "reply_to": 5
+          },
+          {
+            "name": "パキちゃん",
+            "text": "なるほどねー。可用性を落とさずにコストを最適化する良いパターンだね。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "a7eb26c45e4d2cf7ac4ce",
       "url": "https://aws.amazon.com/blogs/machine-learning/deploy-frontier-ai-models-on-aws-trainium-with-sglang-neuron/",
@@ -1940,77 +2007,11 @@
           }
         ]
       }
-    },
-    {
-      "id": "ac7c1db1d24f97b169309",
-      "url": "https://blog.google/company-news/inside-google/around-the-globe/google-asia/e-conomy-sea-report-2026/",
-      "source": "Google AI",
-      "published_on": "2026-10-21",
-      "generated_at": "2026-10-30T04:40:23.534679+09:00",
-      "article_kind": "research",
-      "card": {
-        "title": "東南アジアのデジタル経済規模が3,680億ドルに到達",
-        "lead": "グーグルなどが発表した最新レポートによると、東南アジアのデジタル経済は2026年に3,680億ドルに達する見込みです。",
-        "changed": "11回目となるe-Conomy SEAレポートにおいて、生成AIの普及により東南アジアのデジタル経済が前年比17%増の3,680億ドル規模に成長し、2035年には1兆ドル超へ向かうことが示されました。",
-        "example": "Eコマース分野では、ショッパーがマルチモーダル検索やアプリ内アシスタントを活用して買い物を進める事例が挙げられています。",
-        "caution": "利用者が安心して代理購入機能を使うためには、プライバシー保護の仕組みや透明性のある情報提供が求められています。",
-        "diagram": {
-          "layout": "compare",
-          "question": "東南アジアのデジタル経済規模はどう変わる？",
-          "nodes": [
-            "変更前：2026年のデジタル経済規模",
-            "変更後：2035年の予測規模"
-          ],
-          "result": "2026年の3,680億ドルから2035年には1兆ドル超へと拡大する予測です。"
-        },
-        "comments": [
-          {
-            "name": "みかん",
-            "text": "東南アジアのデジタル経済が3,680億ドルになるってほんま？",
-            "reply_to": null
-          },
-          {
-            "name": "すず",
-            "text": "レポートに2026年の予測として書いてあるみたいやで。",
-            "reply_to": 0
-          },
-          {
-            "name": "たか",
-            "text": "生成AIの使い方もかなり広がってきてるんやな。",
-            "reply_to": 1
-          },
-          {
-            "name": "ろく",
-            "text": "2035年には1兆ドルを超える規模になる予測が出とる。",
-            "reply_to": 2
-          },
-          {
-            "name": "かりん",
-            "text": "データセンターもそれだけ増やさんとあかんのちゃう？",
-            "reply_to": 3
-          },
-          {
-            "name": "じん",
-            "text": "インフラの拡張や新しい取引ルールも必要になるらしいで。",
-            "reply_to": 4
-          },
-          {
-            "name": "とろ",
-            "text": "容量を3倍に増やす計画が求められとるみたいやね。",
-            "reply_to": 5
-          },
-          {
-            "name": "ぽん",
-            "text": "地域全体でルールを整えていくのは大事そうやな。",
-            "reply_to": 6
-          }
-        ]
-      }
     }
   ],
   "addition_stats": {
-    "day": "2026-11-13",
-    "count": 2,
+    "day": "2026-11-14",
+    "count": 1,
     "complete": true
   }
 }
