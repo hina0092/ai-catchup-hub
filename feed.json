@@ -1,9 +1,75 @@
 {
   "format": 1,
-  "checked_at": "2026-11-14T07:06:38.468138+09:00",
-  "updated_at": "2026-11-14T05:55:01.800646+09:00",
-  "status": "invalid_outputs",
+  "checked_at": "2026-11-15T04:12:11.823259+09:00",
+  "updated_at": "2026-11-15T04:12:11.823259+09:00",
+  "status": "ready",
   "entries": [
+    {
+      "id": "a5aface72707a387411f1",
+      "url": "https://zenn.dev/masahito/articles/4e5af1d32cb2dc",
+      "source": "Zenn LLM",
+      "published_on": "2026-11-15",
+      "generated_at": "2026-11-15T04:12:11.823259+09:00",
+      "article_kind": "practice",
+      "card": {
+        "title": "96GBミニPCとStrataで大規模MoEを動かす試行錯誤",
+        "lead": "96GBメモリのミニPCと推論エンジンStrataを使い、Radeon 890Mで大規模MoEモデルのQwen3.8-Flash-Nextを動かすことに成功した記録。",
+        "changed": "推論エンジンStrataとRadeon 890Mを組み合わせ、メモリ96GBのミニPC上で大規模MoEモデルを動作させる検証環境の構築プロセスを紹介している。",
+        "example": "個人OSSの開発において、実装を担当するモデルとは別にローカルLLMへIssueや設計のレビューを任せるワークフローへの応用を目指している。",
+        "caution": "ハードウェアのメモリ容量を増やしてもメモリ帯域自体は変わらないほか、キャッシュサイズや環境設定の調整が必要になる。",
+        "diagram": {
+          "layout": "compare",
+          "question": "hipBLASLtのチューニング有無で性能はどう変わるか",
+          "nodes": [
+            "変更前：チューニングなし",
+            "変更後：チューニングあり"
+          ],
+          "result": "prefill処理の速度が約1.4倍に向上した。"
+        },
+        "comments": [
+          {
+            "name": "積読ペンギン",
+            "text": "ミニPCで大規模MoEが動くのは熱いね。decode速度も14から16 tok/sが出ているらしい",
+            "reply_to": null
+          },
+          {
+            "name": "パキちゃん",
+            "text": "MINISFORUMのAI X1 Proって96GBもあるんだ！ めっちゃ大容量でうらやましい",
+            "reply_to": 0
+          },
+          {
+            "name": "takumi",
+            "text": "hipBLASLtのチューニングでprefillが大きく伸びるのは、リソース最適化の本質としてシナジーを感じるね",
+            "reply_to": 1
+          },
+          {
+            "name": "ねこ背",
+            "text": "うちは設定とかめんどいからそのまま動いてほしいけど、メモリの割当上限とか色々あるんやな",
+            "reply_to": 2
+          },
+          {
+            "name": "パキちゃん",
+            "text": "動いたからってすぐに実用になるわけじゃないんだ。次々課題が出てくるのわかる気がする",
+            "reply_to": 3
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "コンテキストを128Kまで広げても空きVRAMの減少が小さかったのは意外な発見だったよ",
+            "reply_to": 4
+          },
+          {
+            "name": "takumi",
+            "text": "エージェントとして長時間使うにはプロンプトの制御やバリューの出し方が次のマイルストーンだね",
+            "reply_to": 5
+          },
+          {
+            "name": "ねこ背",
+            "text": "レビュー役にするのはまだこれからみたいやけど、タスクによって速度が変わるのも面白いところやな",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "a091099d846f62db22458",
       "url": "https://aws.amazon.com/blogs/machine-learning/cost-optimizing-assemblyai-speech-to-text-inference-on-aws-with-amazon-ec2-spot/",
@@ -1940,77 +2006,10 @@
           }
         ]
       }
-    },
-    {
-      "id": "a806b1f92932cb66421ab",
-      "url": "https://github.blog/ai-and-ml/github-copilot/how-3-java-champions-are-using-github-copilot-for-increased-productivity/",
-      "source": "GitHub Blog AI & ML",
-      "published_on": "2026-10-21",
-      "generated_at": "2026-11-01T03:35:59.988567+09:00",
-      "article_kind": "practice",
-      "card": {
-        "title": "Javaの達人3人が語るGitHub Copilotの活用法",
-        "lead": "Java Championsの3人が、生産性向上を目的としたGitHub Copilotの実践的な利用例やノウハウを共有しています。",
-        "changed": "AIを使って、これまで時間のかかっていた機能開発やスライドの移行などを短期間で進められるようになったことが紹介されています。",
-        "example": "算数の学習アプリを開発し、spaced repetitionやマルチ言語対応を盛り込んだ例があります。",
-        "caution": "AIは生産性を高めるためのものであり、開発者が生成されたプランやコードの内容を確認し、結果に責任を持つ必要があるとされています。",
-        "diagram": {
-          "layout": "steps",
-          "question": "スライド移行の検証作業はどのように行われたか",
-          "nodes": [
-            "Reveal.jsとMarpのバージョンでスクリーンショットを生成する",
-            "ビジュアル的およびアルゴリズム的に比較する",
-            "両方のスライドデッキを並べて実行できるアプリを作る"
-          ],
-          "result": "変更内容を視覚やPDFの比較などで確実に検証できた"
-        },
-        "comments": [
-          {
-            "name": "ねこ背",
-            "text": "経験豊富な開発者がAIをどう現場で使っとるんか気になるわあ。",
-            "reply_to": null
-          },
-          {
-            "name": "バグ太郎",
-            "text": "数週間かかりそうなアプリ開発が数日ですんだ例もあるらしいで。",
-            "reply_to": 0
-          },
-          {
-            "name": "積読ペンギン",
-            "text": "スライド移行では、両方のバージョンのスクリーンショットを生成して比較されたとのことだよ。",
-            "reply_to": 1
-          },
-          {
-            "name": "パキちゃん",
-            "text": "でも全部AI任せってわけじゃなくて、人間がちゃんと確認するんだね！",
-            "reply_to": 2
-          },
-          {
-            "name": "ねこ背",
-            "text": "個人データのサーバー収集を避けてデバイス上で動かす工夫もええな。",
-            "reply_to": 3
-          },
-          {
-            "name": "バグ太郎",
-            "text": "間違えた問題には spaced repetition で同じような問題が戻ってくる仕組みもあるみたいやで。",
-            "reply_to": 4
-          },
-          {
-            "name": "積読ペンギン",
-            "text": "移行作業全体にかかった時間は8〜10時間程度だったそうだよ。",
-            "reply_to": 5
-          },
-          {
-            "name": "パキちゃん",
-            "text": "ツールに頼りすぎず自分で責任を持つ姿勢がすごく大事なんだね！",
-            "reply_to": 6
-          }
-        ]
-      }
     }
   ],
   "addition_stats": {
-    "day": "2026-11-14",
+    "day": "2026-11-15",
     "count": 1,
     "complete": true
   }
