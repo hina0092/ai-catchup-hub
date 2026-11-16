@@ -17,6 +17,35 @@ from collector.daily_cards import generate
 
 
 class DailyRemoteTests(TestCase):
+    def test_two_per_run_survives_runner_restart_and_uses_two_then_one_slots(self):
+        config = json.loads((Path(__file__).resolve().parents[1] / 'collector/daily_config.json').read_text(encoding='utf-8'))
+        requested, variants = [], []
+        def send(model, key, article):
+            requested.append(article['id'])
+            variants.append(article['_generation_variant'])
+            return provider(model, key, article)
+        def mocked_generator(*args, **kwargs):
+            return generate(*args, **kwargs, provider=send, reader=Mock(return_value=EXCERPT), sleep=Mock())
+        collect = Mock(return_value=([row(i) for i in range(5)], 1))
+        store, per_run = self.store, []
+        for index in range(3):
+            if index:
+                store = setup(self.root / f'two-per-run-{index}', str(self.remote))
+            before = len(requested)
+            feed = run(store, config, self.root / f'two-feed-{index}.json',
+                self.root / f'two-ledger-{index}', live=True, env=ENV, now=NOW,
+                collector=collect, generator=mocked_generator)
+            per_run.append(len(requested) - before)
+            self.assertFalse(store.state['active'])
+        self.assertEqual(per_run, [2, 1, 0])
+        self.assertEqual(collect.call_count, 2)
+        self.assertEqual(len(set(requested)), 3)
+        self.assertEqual(variants, ['short_diagram_v1', 'stable', 'stable'])
+        self.assertEqual(len(store.state['files']), 3)
+        self.assertEqual(len(feed['entries']), 3)
+        self.assertEqual(feed['addition_stats']['count'], 3)
+        self.assertFalse((self.root / 'two-ledger-2').exists())
+
     def test_split_runs_restore_reservations_after_503_and_skip_collection_after_three(self):
         requested = []
         def send(model, key, article):

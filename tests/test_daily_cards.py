@@ -31,16 +31,68 @@ def provider(model, key, article):
 class DailyCardsTests(TestCase):
     def test_production_splits_requests_and_legacy_config_without_limit_still_batches(self):
         config = json.loads((ROOT / 'collector/daily_config.json').read_text(encoding='utf-8'))
-        self.assertEqual((config['daily_requests'], config['requests_per_run']), (3, 1))
+        self.assertEqual((config['daily_requests'], config['requests_per_run']), (3, 2))
         send = Mock(side_effect=provider)
         feed = self.generate(config=config, provider=send)
-        self.assertEqual((send.call_count, len(feed['entries'])), (1, 1))
-        legacy = {key: value for key, value in CONFIG.items() if key != 'requests_per_run'}
-        self.generate(config=legacy, provider=send, feed=feed)
+        self.assertEqual((send.call_count, len(feed['entries'])), (2, 2))
+        feed = self.generate(config=config, provider=send, feed=feed)
+        self.assertEqual((send.call_count, len(feed['entries'])), (3, 3))
+        self.generate(config=config, provider=send, feed=feed)
         self.assertEqual(send.call_count, 3)
+        legacy = {key: value for key, value in CONFIG.items() if key != 'requests_per_run'}
+        self.generate(config=legacy, provider=send, rows=[row(i) for i in range(10, 15)],
+                      now=NOW + timedelta(days=1))
+        self.assertEqual(send.call_count, 6)
         for value in (0, -1, 4, True, '1', None):
             with self.subTest(limit=value), self.assertRaises(ValueError):
                 configuration({**CONFIG, 'requests_per_run': value})
+
+    def test_two_observed_starts_use_three_slots_after_long_diagram_or_first_503(self):
+        config = json.loads((ROOT / 'collector/daily_config.json').read_text(encoding='utf-8'))
+        for scenario, expected_runs in (('long_diagram', [2, 1]), ('first_503', [1, 2])):
+            with self.subTest(scenario=scenario), TemporaryDirectory() as directory:
+                requested, variants = [], []
+                def send(model, key, article):
+                    requested.append(article['id'])
+                    variants.append(article['_generation_variant'])
+                    if scenario == 'first_503' and len(requested) == 1:
+                        raise HTTPError('https://example.com', 503, 'PRIVATE_KEY', {}, None)
+                    card = provider(model, key, article)
+                    if scenario == 'long_diagram' and len(requested) == 2:
+                        card['diagram']['nodes'][1] = 'あ' * 36
+                    return card
+                feed, per_run = empty_feed(), []
+                with self.assertLogs('collector.daily_cards', level='INFO') as logs:
+                    for _ in range(2):
+                        before = len(requested)
+                        feed = self.generate(config=config, ledger=Path(directory), provider=send, feed=feed)
+                        per_run.append(len(requested) - before)
+                    blocked = self.generate(config=config, ledger=Path(directory), provider=send, feed=feed)
+                self.assertEqual(per_run, expected_runs)
+                self.assertEqual(len(set(requested)), 3)
+                self.assertEqual(variants, ['short_diagram_v1', 'stable', 'stable'])
+                self.assertEqual(len(feed['entries']), 2)
+                self.assertEqual(feed['addition_stats']['count'], 2)
+                self.assertEqual(blocked['status'], 'budget_limit')
+                self.assertEqual(blocked['entries'], feed['entries'])
+                self.assertEqual(len(list(Path(directory).glob('*.json'))), 3)
+                self.assertNotIn('PRIVATE_KEY', str(logs.output))
+
+    def test_two_per_run_respects_manual_reservations_and_daily_429_stop(self):
+        config = json.loads((ROOT / 'collector/daily_config.json').read_text(encoding='utf-8'))
+        exclusive_json(self.ledger / f'{NOW.date().isoformat()}-manual-abcdef123456.json', {})
+        send = Mock(side_effect=provider)
+        feed = self.generate(config=config, provider=send)
+        self.assertEqual((send.call_count, len(feed['entries'])), (2, 2))
+        self.generate(config=config, provider=send, feed=feed)
+        self.assertEqual(send.call_count, 2)
+        tomorrow = NOW + timedelta(days=1)
+        failed = self.generate(config=config, now=tomorrow,
+            provider=Mock(side_effect=HTTPError('https://example.com', 429, 'PRIVATE_KEY', {}, None)))
+        self.assertEqual(failed['status'], 'rate_limit')
+        forbidden = Mock(side_effect=AssertionError('no further calls after 429'))
+        self.generate(config=config, now=tomorrow, provider=forbidden)
+        forbidden.assert_not_called()
 
     def test_split_runs_reproduce_language_rejection_and_503_without_resending(self):
         config = {**CONFIG, 'requests_per_run': 1}

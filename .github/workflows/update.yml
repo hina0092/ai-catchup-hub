@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       generate:
-        description: 'Generate at most one new card within the shared daily budget'
+        description: 'Generate at most two new cards within the shared daily budget'
         type: boolean
         default: false
   schedule:
