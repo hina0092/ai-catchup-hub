@@ -13,9 +13,9 @@ from collector.daily_cards import (checked_feed, configuration, empty_feed, gene
 from collector.article_source import article_text
 from tests.test_card_trial import ENV, NOW, result
 
-# Existing batch regressions deliberately exercise the legacy three-per-run mode.
+# Existing regressions retain the legacy batch size and one candidate slot.
 CONFIG = {**json.loads((ROOT / 'collector/daily_config.json').read_text(encoding='utf-8')),
-          'requests_per_run': 3}
+          'requests_per_run': 3, 'generation_candidate_slots': 1}
 EXCERPT = 'これは入力から抽出された記事本文のテストです。' * 40
 
 
@@ -29,6 +29,60 @@ def provider(model, key, article):
 
 
 class DailyCardsTests(TestCase):
+    def test_two_candidate_slots_keep_stable_third_after_rejections_and_restart(self):
+        config = json.loads((ROOT / 'collector/daily_config.json').read_text(encoding='utf-8'))
+        self.assertEqual(config['generation_candidate_slots'], 2)
+        requested, variants = [], []
+        def send(model, key, article):
+            requested.append(article['id'])
+            variants.append(article['_generation_variant'])
+            card = provider(model, key, article)
+            if article['_generation_variant'] == 'short_diagram_v1':
+                card['diagram']['nodes'][1] = 'あ' * 36
+            return card
+        with self.assertLogs('collector.daily_cards', level='INFO') as logs:
+            first = self.generate(config=config, provider=send)
+            feed = self.generate(config=config, provider=send, feed=first)
+        self.assertEqual((first['status'], len(first['entries'])), ('invalid_outputs', 0))
+        self.assertEqual(variants, ['short_diagram_v1', 'short_diagram_v1', 'stable'])
+        self.assertEqual(len(set(requested)), 3)
+        self.assertEqual((len(feed['entries']), feed['addition_stats']['count']), (1, 1))
+        rejected = [json.loads(r.getMessage()) for r in logs.records
+                    if json.loads(r.getMessage())['event'] == 'daily_card_rejected']
+        self.assertEqual([(r['field'], r['detail']) for r in rejected],
+                         [('diagram.nodes.1', 'too_long')] * 2)
+        self.generate(config=config, provider=send, feed=feed)
+        self.assertEqual(len(requested), 3)
+        next_day = NOW + timedelta(days=1)
+        self.generate(config=config, provider=send, feed=feed, now=next_day)
+        self.generate(config=config, provider=send, feed=feed, now=next_day)
+        self.assertEqual(variants[3:], ['short_diagram_v1', 'short_diagram_v1', 'stable'])
+
+    def test_two_candidate_slots_count_manual_reservations_and_support_rollback(self):
+        config = json.loads((ROOT / 'collector/daily_config.json').read_text(encoding='utf-8'))
+        exclusive_json(self.ledger / f'{NOW.date().isoformat()}-manual-abcdef123456.json', {})
+        variants = []
+        def send(model, key, article):
+            variants.append(article['_generation_variant'])
+            return provider(model, key, article)
+        self.generate(config=config, provider=send)
+        self.assertEqual(variants, ['short_diagram_v1', 'stable'])
+        disabled = {**config, 'generation_candidate': 'off'}
+        for _ in range(2):
+            self.generate(config=disabled, provider=send, now=NOW + timedelta(days=1))
+        self.assertEqual(variants[2:], ['stable'] * 3)
+        for slots in (1, None):
+            legacy = {**config, 'generation_candidate_slots': slots}
+            if slots is None:
+                del legacy['generation_candidate_slots']
+            day = NOW + timedelta(days=2 if slots == 1 else 3)
+            for _ in range(2):
+                self.generate(config=legacy, provider=send, now=day)
+            self.assertEqual(variants[-3:], ['short_diagram_v1', 'stable', 'stable'])
+        for slots in (0, -1, 3, True, '2', None):
+            with self.subTest(slots=slots), self.assertRaises(ValueError):
+                configuration({**config, 'generation_candidate_slots': slots})
+
     def test_production_splits_requests_and_legacy_config_without_limit_still_batches(self):
         config = json.loads((ROOT / 'collector/daily_config.json').read_text(encoding='utf-8'))
         self.assertEqual((config['daily_requests'], config['requests_per_run']), (3, 2))
@@ -70,7 +124,7 @@ class DailyCardsTests(TestCase):
                     blocked = self.generate(config=config, ledger=Path(directory), provider=send, feed=feed)
                 self.assertEqual(per_run, expected_runs)
                 self.assertEqual(len(set(requested)), 3)
-                self.assertEqual(variants, ['short_diagram_v1', 'stable', 'stable'])
+                self.assertEqual(variants, ['short_diagram_v1', 'short_diagram_v1', 'stable'])
                 self.assertEqual(len(feed['entries']), 2)
                 self.assertEqual(feed['addition_stats']['count'], 2)
                 self.assertEqual(blocked['status'], 'budget_limit')

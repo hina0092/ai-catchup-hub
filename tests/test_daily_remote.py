@@ -40,7 +40,7 @@ class DailyRemoteTests(TestCase):
         self.assertEqual(per_run, [2, 1, 0])
         self.assertEqual(collect.call_count, 2)
         self.assertEqual(len(set(requested)), 3)
-        self.assertEqual(variants, ['short_diagram_v1', 'stable', 'stable'])
+        self.assertEqual(variants, ['short_diagram_v1', 'short_diagram_v1', 'stable'])
         self.assertEqual(len(store.state['files']), 3)
         self.assertEqual(len(feed['entries']), 3)
         self.assertEqual(feed['addition_stats']['count'], 3)
