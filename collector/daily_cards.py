@@ -46,7 +46,9 @@ def configuration(value):
             or not set(value['article_hosts']).issubset(HOSTS)
             or not isinstance(value.get('source_names'), list) or not value['source_names']
             or any(not isinstance(n, str) or not n for n in value['source_names'])
-            or value.get('generation_candidate', 'off') not in ('off', 'short_diagram_v1')):
+            or value.get('generation_candidate', 'off') not in ('off', 'short_diagram_v1')
+            or type(value.get('generation_candidate_slots', 1)) is not int
+            or not 1 <= value.get('generation_candidate_slots', 1) <= 2):
         raise ValueError('daily configuration')
     return value
 
@@ -271,9 +273,9 @@ def generate(rows, feed, ledger, config, env, persist, *, now=None,
         if used:
             sleep(15)
         used += 1; attempts += 1
-        # Only the first durable reservation of the actual JST day can trial
-        # a candidate. Restarts and manual reservations consume that slot too.
-        variant = ('short_diagram_v1' if used == 1
+        # Candidate allocation follows durable reservations of the actual JST day.
+        # Restarts, failures and manual reservations consume those slots too.
+        variant = ('short_diagram_v1' if used <= config.get('generation_candidate_slots', 1)
                    and config.get('generation_candidate', 'off') == 'short_diagram_v1' else 'stable')
         LOGGER.info(json.dumps(dict(event='daily_card_generation', attempt=attempts,
             slot=used, variant=variant, candidate_index=candidate_index), sort_keys=True))
