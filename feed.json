@@ -1,9 +1,143 @@
 {
   "format": 1,
-  "checked_at": "2026-11-17T08:24:33.485184+09:00",
-  "updated_at": "2026-11-16T06:11:37.703817+09:00",
-  "status": "provider_error",
+  "checked_at": "2026-11-17T09:24:59.545634+09:00",
+  "updated_at": "2026-11-17T09:24:59.545634+09:00",
+  "status": "ready",
   "entries": [
+    {
+      "id": "a084d5d758a8d3c520c2c",
+      "url": "https://zenn.dev/anguoyang/articles/d92b24408bbc7b",
+      "source": "Zenn LLM",
+      "published_on": "2026-11-17",
+      "generated_at": "2026-11-17T09:24:59.545634+09:00",
+      "article_kind": "practice",
+      "card": {
+        "title": "Llama 3.2 1BをQCS6490で実測しプリフィル1,024 tok/sを記録",
+        "lead": "QCS6490上でLlama 3.2 1B Instructを動かし、プリフィル1,024 tok/s、デコード16.4 tok/sを実測した。",
+        "changed": "前回のQwen3-0.6Bと同じ回避策とチェーンを使い、入力形状を固定してコンパイルと実機プロファイルを通過させた。",
+        "example": "異なるモデルファミリーでも同じ手順が通用するか確かめるため、今後はQwen3-1.7BやLlama 3.2 3Bの検証を予定している。",
+        "caution": "数値は実機のグラフ別プロファイルから導出したものであり、ランタイムのオーバーヘッドを含むエンドツーエンド実行ではない。",
+        "diagram": {
+          "layout": "steps",
+          "question": "QCS6490上でLlama 3.2 1Bの性能を測る手順はどうなっているか",
+          "nodes": [
+            "スクリプトのフラグ修正と入力形状固定",
+            "HubAPIからコンパイルとリンクを実行",
+            "実機でのグラフ別プロファイル測定"
+          ],
+          "result": "プリフィル1,024 tok/sとデコード16.4 tok/sの数値が得られる"
+        },
+        "comments": [
+          {
+            "name": "なると@初心者",
+            "text": "前回のモデルと同じ方法で、別のモデルも動かせるようになったということでしょうか？",
+            "reply_to": null
+          },
+          {
+            "name": "山田",
+            "text": "記事を読めば、同じチェーンでLlamaも通せたってちゃんと書いてあるだろｗ",
+            "reply_to": 0
+          },
+          {
+            "name": "タナカラボ",
+            "text": "僕も確認したけど、失敗したジョブからパラメータを読み直してフラグを調整しているね。",
+            "reply_to": 1
+          },
+          {
+            "name": "ドパガキ",
+            "text": "めんどいところは自動で全部やってくれるわけじゃないのか。",
+            "reply_to": 2
+          },
+          {
+            "name": "タナカラボ",
+            "text": "公式スクリプトのバグは残っているから、入力形状の固定などを手動で補う必要があるよ。",
+            "reply_to": 3
+          },
+          {
+            "name": "山田",
+            "text": "俺はエンドツーエンドじゃないって注意書きのほうが気になるね。数字だけ独り歩きしそう。",
+            "reply_to": 4
+          },
+          {
+            "name": "なると@初心者",
+            "text": "詳しいデータやベンチマークのリポジトリは、公開されているのでしょうか？",
+            "reply_to": 5
+          },
+          {
+            "name": "タナカラボ",
+            "text": "失敗分も含めてGitHubやHugging Faceに全データが置いてあるから見てみるといいよ。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "adfc32ad6652396f06f7a",
+      "url": "https://blog.google/products-and-platforms/products/maps/ask-maps-holiday-travel-features-2026/",
+      "source": "Google AI",
+      "published_on": "2026-11-16",
+      "generated_at": "2026-11-17T09:24:59.545634+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "Google Mapsに旅行や準備を助ける新しいAsk Maps機能が登場",
+        "lead": "ホリデーシーズンの旅行計画や日々の用事をサポートするAsk Mapsの新機能が発表されました。",
+        "changed": "Google Mapsで詳細な旅行日程の作成、ペットの世話などの店舗予約、保存したリストからの空き状況の検索ができる新機能がAndroidとiOS向けに順次提供されます。",
+        "example": "3日間のロードトリップで海岸線のハイキングや飲食店への立ち寄りを含む詳細なスケジュールを組み立てることができます。",
+        "caution": "ルートのヒントや予約機能の対応地域は順次拡大中で、機能ごとに提供状況が異なります。",
+        "diagram": {
+          "layout": "steps",
+          "question": "Ask Mapsを使った旅行の計画から出発までの流れはどうなっていますか？",
+          "nodes": [
+            "Ask Mapsで日帰りや複数日の旅行計画を作る",
+            "番号付きのピンやスケジュールを確認して共有する",
+            "出発時にチャット履歴から行程を呼び出す"
+          ],
+          "result": "リアルタイムの交通状況や店舗の営業状態を確認しながら移動できる"
+        },
+        "comments": [
+          {
+            "name": "パキちゃん",
+            "text": "旅行の計画を自分で細かく立てるの面倒だから、こういう機能待ってた！",
+            "reply_to": null
+          },
+          {
+            "name": "ドパガキ",
+            "text": "これ、もうスマホがあれば世界中どこでも今すぐ使えるってこと？",
+            "reply_to": 0
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "AndroidとiOSで順次提供されていて、200以上の地域に拡大中だよ。",
+            "reply_to": 1
+          },
+          {
+            "name": "タナカラボ",
+            "text": "美容室やペットの世話の予約まで代行して探してくれるのは実用的だね。",
+            "reply_to": 2
+          },
+          {
+            "name": "ドパガキ",
+            "text": "保存したリストからも空いているお店を探せるのは便利そうだな。",
+            "reply_to": 3
+          },
+          {
+            "name": "積読ペンギン",
+            "text": "ヨーロッパの30カ国などへも対象地域が広がっているみたいだね。",
+            "reply_to": 4
+          },
+          {
+            "name": "タナカラボ",
+            "text": "ただ、ルートのヒントや予約機能はまず米国で先行して始まるみたいだ。",
+            "reply_to": 5
+          },
+          {
+            "name": "パキちゃん",
+            "text": "早く日本でもフルで使えるようになってほしいな！楽しみ！",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "ae7141770cae923572d58",
       "url": "https://zenn.dev/gen_tokunaga/articles/bdf9e8e0faf872",
@@ -1875,144 +2009,11 @@
           }
         ]
       }
-    },
-    {
-      "id": "af21574bd1bc9e549a97c",
-      "url": "https://aws.amazon.com/blogs/machine-learning/building-intent-driven-ui-testing-with-amazon-nova-act/",
-      "source": "AWS AI",
-      "published_on": "2026-10-30",
-      "generated_at": "2026-10-30T04:40:23.534679+09:00",
-      "article_kind": "announcement",
-      "card": {
-        "title": "Amazon Nova Actを活用したUIテストの構築",
-        "lead": "企業のエプシロンが、急速なアプリ変更に対応するためにAmazon Nova Actを用いたインテント駆動型UIテストを導入した事例を紹介します。",
-        "changed": "Amazon Nova ActとAmazon Bedrock AgentCore Browser Toolを組み合わせて、自然言語によるインテント駆動型のUIテスト機能を提供します。",
-        "example": "エプシロンのプラットフォームにおける「エージェントの作成」フローの自動化などが例として挙げられています。",
-        "caution": "チームごとにブラウザインフラの立ち上げや依存関係の管理を行うと重複した労力が生じる課題があります。",
-        "diagram": {
-          "layout": "steps",
-          "question": "プラットフォームでUIテストのワークフローが実行されるまでの流れは？",
-          "nodes": [
-            "ユーザーがプラットフォームAPIでワークフローを作成する",
-            "バックグラウンドのタスクランナーがブラウザセッションを開く",
-            "Amazon Nova Actを介してステップを実行する"
-          ],
-          "result": "テストの実行結果やスクリーンショット、セッションIDが保存される"
-        },
-        "comments": [
-          {
-            "name": "みけ",
-            "text": "UIテストを自然言語でやれるんか？",
-            "reply_to": null
-          },
-          {
-            "name": "クロ",
-            "text": "プロンプトの指示をそのまま実行してくれるみたいやで。",
-            "reply_to": 0
-          },
-          {
-            "name": "シロ",
-            "text": "CSSセレクタの変更でテストが壊れにくくなるのは助かるな。",
-            "reply_to": 1
-          },
-          {
-            "name": "トラ",
-            "text": "今までのテストはどうなるんやろ？",
-            "reply_to": null
-          },
-          {
-            "name": "タマ",
-            "text": "既存の回帰テストもそのまま残して併用する形やな。",
-            "reply_to": 3
-          },
-          {
-            "name": "モモ",
-            "text": "チームごとに環境を作らんでいいのは楽そうやな。",
-            "reply_to": 4
-          },
-          {
-            "name": "ジョン",
-            "text": "裏ではWebSocketとかでブラウザを動かしてるんか？",
-            "reply_to": null
-          },
-          {
-            "name": "ハチ",
-            "text": "インフラの管理をせんでええのは助かるわ。",
-            "reply_to": 6
-          }
-        ]
-      }
-    },
-    {
-      "id": "a90461328731011d4db8d",
-      "url": "https://zenn.dev/sugawara_ai/articles/ai-news-20261029",
-      "source": "Zenn AI",
-      "published_on": "2026-10-30",
-      "generated_at": "2026-10-30T04:40:23.534679+09:00",
-      "article_kind": "announcement",
-      "card": {
-        "title": "Gemini 4 Carbonが1位でもまだ使えない理由",
-        "lead": "Googleが発表したGemini 4 Carbonがベンチマークの総合指数で1位を獲得したものの、現時点では一部のサイバー防御担当者向けの提供にとどまり一般には使えない理由を解説します。",
-        "changed": "Google DeepMindが新しいAIモデルとしてGemini 4 Carbonを発表しました。共通テストのベンチマーク総合指数で59点を記録し1位となっていますが、提供先はサイバー防御を行う一部の人たちに限定されています。",
-        "example": "モーターショーに出展されたかっこいい試作車のようなもので、発表されても明日の通勤に使えない状態に例えられます。",
-        "caution": "企業や一般向けの提供時期は「できるだけ早く」とされており、具体的な日付は明らかにされていません。",
-        "diagram": {
-          "layout": "compare",
-          "question": "Geminiの発表版と現在使える版はどう違うのか？",
-          "nodes": [
-            "変更前：発表された版（Gemini 4 Carbon）",
-            "変更後：今使える版（Argon）"
-          ],
-          "result": "Carbonは1位だが一部の人しか使えず、今実際に使えるのは2週間前に出たArgonのほうになる。"
-        },
-        "comments": [
-          {
-            "name": "みかん",
-            "text": "ベンチマークで1位なんやったらすぐ使えるんちゃうん？",
-            "reply_to": null
-          },
-          {
-            "name": "匿名",
-            "text": "それが最初の相手はサイバー防御の人だけらしいで。",
-            "reply_to": 0
-          },
-          {
-            "name": "しお",
-            "text": "一般向けはいつになるんか日付が出てないんやな。",
-            "reply_to": 1
-          },
-          {
-            "name": "てつ",
-            "text": "セキュリティの試験ですごい点数出てるのに惜しいなあ。",
-            "reply_to": 2
-          },
-          {
-            "name": "ぽん",
-            "text": "例えにあった試作車みたいなもんか。",
-            "reply_to": 3
-          },
-          {
-            "name": "もこ",
-            "text": "今使えるのはArgonの方なんやね。",
-            "reply_to": 4
-          },
-          {
-            "name": "よッしー",
-            "text": "名前が新しいからって飛びつかん方がええんか。",
-            "reply_to": 5
-          },
-          {
-            "name": "ろく",
-            "text": "しっかり今使える版を触る方が大事やねんなあ。",
-            "reply_to": 6
-          }
-        ]
-      }
     }
   ],
   "addition_stats": {
     "day": "2026-11-17",
-    "count": 0,
+    "count": 2,
     "complete": true
   }
 }
