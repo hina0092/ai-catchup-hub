@@ -1,8 +1,8 @@
 {
   "format": 1,
-  "checked_at": "2026-11-19T08:02:54.448256+09:00",
+  "checked_at": "2026-11-20T07:10:44.746888+09:00",
   "updated_at": "2026-11-19T08:02:54.448256+09:00",
-  "status": "ready",
+  "status": "provider_error",
   "entries": [
     {
       "id": "a34e9241eb4cfbd5ab1ca",
@@ -2012,8 +2012,8 @@
     }
   ],
   "addition_stats": {
-    "day": "2026-11-19",
-    "count": 1,
+    "day": "2026-11-20",
+    "count": 0,
     "complete": true
   }
 }
