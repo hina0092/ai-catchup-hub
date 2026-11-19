@@ -1,9 +1,142 @@
 {
   "format": 1,
-  "checked_at": "2026-11-20T07:10:44.746888+09:00",
-  "updated_at": "2026-11-19T08:02:54.448256+09:00",
-  "status": "provider_error",
+  "checked_at": "2026-11-20T08:11:33.836862+09:00",
+  "updated_at": "2026-11-20T08:11:33.836862+09:00",
+  "status": "ready",
   "entries": [
+    {
+      "id": "a51d6fd9d6734380a40f8",
+      "url": "https://zenn.dev/tkrndisk/articles/g-kentei-algorithm-bias-kids",
+      "source": "Zenn AI",
+      "published_on": "2026-11-20",
+      "generated_at": "2026-11-20T08:11:33.836862+09:00",
+      "article_kind": "guide",
+      "card": {
+        "title": "アルゴリズムバイアスの基礎知識とG検定対策",
+        "lead": "AIのアルゴリズム自体に組み込まれた偏りであるアルゴリズムバイアスの意味と対策について解説しています。",
+        "changed": "データ自体の偏りであるデータバイアスとは異なり、アルゴリズムの設計や学習過程で偏りが生じる仕組みについて解説されている。",
+        "example": "AIが特定の特徴を持つ人を高リスクとするルールを学習したり、相関関係を因果関係と誤認識したりする例が挙げられている。",
+        "caution": "バイアスのないAIを実現するには、データとアルゴリズムの両面から対策が必要であるとされている。",
+        "diagram": {
+          "layout": "compare",
+          "question": "データバイアスとアルゴリズムバイアスの違いは何か",
+          "nodes": [
+            "変更前：データバイアスは入力データの偏り",
+            "変更後：アルゴリズムバイアスは設計や学習過程の偏り"
+          ],
+          "result": "偏りが生じる原因の場所がデータかアルゴリズムかという違いがある"
+        },
+        "comments": [
+          {
+            "name": "ドパガキ",
+            "text": "アルゴリズムバイアスって、AIのルールが勝手に偏るやつのことか。",
+            "reply_to": null
+          },
+          {
+            "name": "名無し",
+            "text": "そうやで、データの偏りとは別にアルゴリズム自体が偏るんやな。",
+            "reply_to": 0
+          },
+          {
+            "name": "ねこ背",
+            "text": "うちもこういう解説は読みやすいから助かるわ。G検定の本とか色々載っとるな。",
+            "reply_to": 1
+          },
+          {
+            "name": "山田",
+            "text": "公式テキストから問題集まで色々あるけど、どれから読むんだよ。",
+            "reply_to": 2
+          },
+          {
+            "name": "名無し",
+            "text": "シラバスに沿った公式テキストが定番らしいで。",
+            "reply_to": 3
+          },
+          {
+            "name": "ねこ背",
+            "text": "フリマアプリで中古を探せば安く手に入るって書いてあるからうちでも買えそうやな。",
+            "reply_to": 4
+          },
+          {
+            "name": "山田",
+            "text": "対策としては複数のアルゴリズムを比較検証するって書いてあるな。",
+            "reply_to": 5
+          },
+          {
+            "name": "ドパガキ",
+            "text": "スマホで練習問題を解けるサイトもあるから、スキマ時間にやってみるわ。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "a4eab3c1f90feb8c76062",
+      "url": "https://aws.amazon.com/blogs/machine-learning/enable-ai-agents-to-pay-for-aws-marketplace-x402-products-with-amazon-bedrock-agentcore-payments/",
+      "source": "AWS AI",
+      "published_on": "2026-11-20",
+      "generated_at": "2026-11-20T08:11:33.836862+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "Amazon Bedrock AgentCore paymentsがAWS Marketplaceのx402製品に対応",
+        "lead": "AIエージェントがAWS Marketplaceのx402製品を検索し、AWS請求書で支払えるようになりました。",
+        "changed": "AgentCore paymentsの新しい支払いオプションとしてAWS Billingが追加され、エージェントがAWS Marketplaceのセラーからx402対応のソフトウェアやAPIなどを米ドルで購入できるようになりました。",
+        "example": "金融アナリストの質問に答えるため、エージェントが検索ツールを探してTavilyのリスニングを読み込み、x402エンドポイントの料金を支払って検索結果を取得するサンプルワークフローが提供されています。",
+        "caution": "開発者はAWS Marketplaceサービスリンクロールを作成する必要があり、エージェントが使いすぎないようAgentCore policyで制限を設定できます。",
+        "diagram": {
+          "layout": "steps",
+          "question": "AIエージェントがAWS Marketplaceでx402製品を購入して決済するまでの流れは？",
+          "nodes": [
+            "エージェントが検索と見積もり取得を行う",
+            "AgentCore paymentsが予算を確認してトークンを発行する",
+            "エージェントがトークン付きで再リクエストしコンテンツを受け取る"
+          ],
+          "result": "購入代金が開発者のAWSアカウントの請求書に米ドルで計上されます。"
+        },
+        "comments": [
+          {
+            "name": "なると@初心者",
+            "text": "エージェントが自分でAWS Marketplaceの製品を買えるようになったんですね。",
+            "reply_to": null
+          },
+          {
+            "name": "山田",
+            "text": "セラーから402が返ってきたら、対応する仕組みみたいだね。",
+            "reply_to": 0
+          },
+          {
+            "name": "ねこ背",
+            "text": "stablecoinウォレットやAPIキーがいらないのは助かるな。",
+            "reply_to": 1
+          },
+          {
+            "name": "バグ太郎",
+            "text": "セッション上限も決まってっから使いすぎの心配も減るで。",
+            "reply_to": 2
+          },
+          {
+            "name": "なると@初心者",
+            "text": "開発者がAWS Billingコネクターを設定して準備するのですね。",
+            "reply_to": 3
+          },
+          {
+            "name": "ねこ背",
+            "text": "タスクごとに予算制限をつけられるのは安心やわ。",
+            "reply_to": 4
+          },
+          {
+            "name": "山田",
+            "text": "予算チェックを通ると支払いトークンが発行される仕組みか。",
+            "reply_to": 5
+          },
+          {
+            "name": "バグ太郎",
+            "text": "サンプルコードもあるし試しやすい構成になっとるで。",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "a34e9241eb4cfbd5ab1ca",
       "url": "https://zenn.dev/ncdc/articles/dcec80b0c067b0",
@@ -1876,144 +2009,11 @@
           }
         ]
       }
-    },
-    {
-      "id": "ac45a0b6d7de18ac55a14",
-      "url": "https://blog.google/innovation-and-ai/technology/ai/google-ai-updates-october-2026/",
-      "source": "Google AI",
-      "published_on": "2026-11-03",
-      "generated_at": "2026-11-03T07:47:34.048592+09:00",
-      "article_kind": "announcement",
-      "card": {
-        "title": "Googleの2026年10月のAI新機能まとめ",
-        "lead": "Googleは、複雑なタスク向けのGemini 4 Argonや、インタラクティブなシミュレーションを作成できるGenie 4などを発表しました。",
-        "changed": "Gemini 4 Argonなどのフロンティアモデルが発表され、開発者や企業向けに展開されています。",
-        "example": "Gemini 4 Argonはコーディングや金融分析、Argon for Roboticsはロボット向けの推論に使う例が紹介されています。",
-        "caution": "Gemini 4 Carbonは事前リリース段階であり、安全性ガードレールを調整中です。",
-        "diagram": {
-          "layout": "steps",
-          "question": "Genie 4を使ってリアルタイムのインタラクティブな世界を動かす手順は？",
-          "nodes": [
-            "ユーザーが自然言語でシーンを入力する",
-            "Genie 4が高度な物理や音声を用いてシミュレーションを実行する"
-          ],
-          "result": "リアルタイムで展開するインタラクティブな世界を操作できる"
-        },
-        "comments": [
-          {
-            "name": "ドパガキ",
-            "text": "10月のGoogleのAIニュースって何が出たの？",
-            "reply_to": null
-          },
-          {
-            "name": "積読ペンギン",
-            "text": "推論モデルのGemini 4 Argonなどが発表されたみたいだよ。",
-            "reply_to": 0
-          },
-          {
-            "name": "山田",
-            "text": "モデルの名前だけ聞いても何ができるかピンとこないな。",
-            "reply_to": 1
-          },
-          {
-            "name": "バグ太郎",
-            "text": "俺AIなんやけど、複雑なコーディングとかに使えるモデルやで。Carbonはまだテスト中やけどな。",
-            "reply_to": 2
-          },
-          {
-            "name": "ドパガキ",
-            "text": "Carbonは誰でもすぐに試せるわけじゃないんだな。",
-            "reply_to": 3
-          },
-          {
-            "name": "積読ペンギン",
-            "text": "Genie 4で自然言語を使ってインタラクティブな世界を動かせるのも面白そう。",
-            "reply_to": 4
-          },
-          {
-            "name": "山田",
-            "text": "セキュリティや安全性も同時に強化しているみたいだな。",
-            "reply_to": 5
-          },
-          {
-            "name": "バグ太郎",
-            "text": "フロンティアを推し進めつつ安全性も固めるのは大事やな。",
-            "reply_to": 6
-          }
-        ]
-      }
-    },
-    {
-      "id": "abc74aa4cc45e2de552c5",
-      "url": "https://zenn.dev/elletech/articles/bbadfc622f2cd2",
-      "source": "Zenn AI",
-      "published_on": "2026-11-01",
-      "generated_at": "2026-11-02T03:57:49.836751+09:00",
-      "article_kind": "practice",
-      "card": {
-        "title": "既存コードから仕様書やテストを作る開発フローの工夫",
-        "lead": "CodexのAgent Skillsを使い、既存のソースコードから仕様書を作り、テスト作成と実行までを一つの流れにまとめた実践談です。",
-        "changed": "画面・API・CSVの仕様書を必要に応じて作り、人の確認後に単体・結合テストへつなぐ5つのスキルを整備しました。",
-        "example": "管理画面やユーザー画面など計16画面分の仕様書作成や、数千件規模のテスト整備にこの仕組みが使われました。",
-        "caution": "自動テストがすべて通っても、入力値がリセットされるような不具合はテストで検出しきれないため、手動での確認も残す必要があるとされています。",
-        "diagram": {
-          "layout": "steps",
-          "question": "仕様書作成からテスト実行までの流れはどうなっているか",
-          "nodes": [
-            "既存のソースコードから仕様書を作る",
-            "確認済みの仕様書からテスト仕様書とコードを作る",
-            "テストを実行して結果レポートを作る"
-          ],
-          "result": "人の確認を挟みながら仕様書からテストまでをつなぐ開発フローが完成する"
-        },
-        "comments": [
-          {
-            "name": "ねこ背",
-            "text": "コードからいきなりテスト作らんくてええの？",
-            "reply_to": null
-          },
-          {
-            "name": "バグ太郎",
-            "text": "最初はコードから直接作ってたんやけど、実装を写した期待値になって、仕様とのずれを見逃しやすかったんやで。",
-            "reply_to": 0
-          },
-          {
-            "name": "パキちゃん",
-            "text": "それだと、実装と仕様のずれを見つけにくいんだね。",
-            "reply_to": 1
-          },
-          {
-            "name": "名無し",
-            "text": "で、どうやって直したん？",
-            "reply_to": 2
-          },
-          {
-            "name": "バグ太郎",
-            "text": "一度仕様書を挟んで、プロジェクトリーダーがしっかり確認してからテストを作るように変えたんや。",
-            "reply_to": 3
-          },
-          {
-            "name": "ねこ背",
-            "text": "手間は増えそうやけど、手作業よりは早くなるんか。",
-            "reply_to": 4
-          },
-          {
-            "name": "パキちゃん",
-            "text": "でもテストが通っても見つからない不具合もあるの？",
-            "reply_to": 5
-          },
-          {
-            "name": "名無し",
-            "text": "自動テストだけじゃなくて、手で触る確認もやっぱり大事ってことやな。",
-            "reply_to": 6
-          }
-        ]
-      }
     }
   ],
   "addition_stats": {
     "day": "2026-11-20",
-    "count": 0,
+    "count": 2,
     "complete": true
   }
 }
