@@ -1,9 +1,76 @@
 {
   "format": 1,
-  "checked_at": "2026-11-21T06:51:14.857757+09:00",
-  "updated_at": "2026-11-20T08:11:33.836862+09:00",
-  "status": "provider_error",
+  "checked_at": "2026-11-21T07:46:31.582582+09:00",
+  "updated_at": "2026-11-21T07:46:31.582582+09:00",
+  "status": "ready",
   "entries": [
+    {
+      "id": "a48003ca6dcdc0ce99136",
+      "url": "https://aws.amazon.com/blogs/machine-learning/introducing-amazon-sagemaker-hyperpod-global-inference-gateway-one-endpoint-across-regions-and-clusters/",
+      "source": "AWS AI",
+      "published_on": "2026-11-21",
+      "generated_at": "2026-11-21T07:46:31.582582+09:00",
+      "article_kind": "announcement",
+      "card": {
+        "title": "Amazon SageMaker HyperPod Global Inference Gateway発表",
+        "lead": "複数のリージョンやクラスターにまたがる推論リクエストを一つのエンドポイントで受け付ける機能が追加されました。",
+        "changed": "登録したすべてのクラスターへ横断的にリクエストを振り分けるSageMaker管理のゲートウェイが導入され、自動フェイルオーバーやAWS Signature Version 4とIAMによる認証が行われます。",
+        "example": "ベータテストでは、複数リージョン間でのルーティングと障害時の継続的なサービス提供が確認されています。",
+        "caution": "公開する前にリストにクラスターを追加すると、処理が失敗して修正を促すメッセージが表示されます。",
+        "diagram": {
+          "layout": "steps",
+          "question": "リクエストはどのように送信されてクラスターへルーティングされるか",
+          "nodes": [
+            "クライアントが署名付きリクエストを送信する",
+            "ゲートウェイが認証して最適なクラスターを選ぶ",
+            "AWS PrivateLinkが通信を運ぶ"
+          ],
+          "result": "クラスター内の推論ゲートウェイがモデルポッドへリクエストを転送する"
+        },
+        "comments": [
+          {
+            "name": "なると@初心者",
+            "text": "クライアントは署名をつけてリージョンのエンドポイントへ送るのですね。",
+            "reply_to": null
+          },
+          {
+            "name": "バグ太郎",
+            "text": "そうやで。そのあとPrivateLinkが通信を最適に運んでくれるんや。",
+            "reply_to": 0
+          },
+          {
+            "name": "ドパガキ",
+            "text": "これがあれば複数のクラスターを一つにまとめられるってこと？",
+            "reply_to": null
+          },
+          {
+            "name": "パキちゃん",
+            "text": "ベータテストでうまく動いてたみたいだし、すごく便利そう！",
+            "reply_to": 2
+          },
+          {
+            "name": "なると@初心者",
+            "text": "自動でフェイルオーバーもしてくれるのは安心ですね。",
+            "reply_to": null
+          },
+          {
+            "name": "バグ太郎",
+            "text": "ロードバランサーを自分で作らんでええから楽やんな。",
+            "reply_to": 4
+          },
+          {
+            "name": "ドパガキ",
+            "text": "負荷の状況とかを見て一番良いクラスターを選んでくれるの？",
+            "reply_to": null
+          },
+          {
+            "name": "パキちゃん",
+            "text": "使いたいGPUの容量を無駄なく使えるようになるのは最高！",
+            "reply_to": 6
+          }
+        ]
+      }
+    },
     {
       "id": "a51d6fd9d6734380a40f8",
       "url": "https://zenn.dev/tkrndisk/articles/g-kentei-algorithm-bias-kids",
@@ -1941,79 +2008,11 @@
           }
         ]
       }
-    },
-    {
-      "id": "aa7f64e0d32da7d5ce362",
-      "url": "https://aws.amazon.com/blogs/machine-learning/bring-structured-and-unstructured-data-together-with-amazon-quick/",
-      "source": "AWS AI",
-      "published_on": "2026-11-04",
-      "generated_at": "2026-11-04T05:31:39.850982+09:00",
-      "article_kind": "guide",
-      "card": {
-        "title": "Amazon Quickで構造化データと非構造化データをまとめて扱う手順",
-        "lead": "Amazon Quickを使い、S3上の非構造化データとデータベース等の構造化データを1つの対話型AIエージェントで一緒に検索できるよう接続します。",
-        "changed": "S3のデータソース接続と知識ベース作成、データセットの登録と意味情報の追加、それらをまとめるスペースの作成、カスタムチャットエージェントの設定の手順を紹介しています。",
-        "example": "記事では、S3にアップロードするPDFなどの非構造化文書と、手元でCSV形式から読み込む商品売上データを組み合わせて使う例が紹介されています。",
-        "caution": "データセットを作成するには、実行するユーザーがAmazon Quickのエンタープライズサブスクリプションを利用している必要があります。",
-        "diagram": {
-          "layout": "steps",
-          "question": "Amazon Quickでデータをまとめて検索する仕組みはどうなっているか",
-          "nodes": [
-            "S3の非構造化文書を知識ベースでインデックス化する",
-            "売上データをデータセットとして読み込み意味情報を付与",
-            "スペースで両方のデータ型をひとつのワークスペースに集約",
-            "チャットエージェントが両方を横断して質問に回答"
-          ],
-          "result": "構造化データと非構造化データを組み合わせた検索と引用付きの回答が得られる"
-        },
-        "comments": [
-          {
-            "name": "名無し",
-            "text": "ファイルとデータベースって別々に検索せんとあかんから面倒やんな。",
-            "reply_to": null
-          },
-          {
-            "name": "積読ペンギン",
-            "text": "Amazon Quickを使うと、S3の知識ベースと構造化データを1つの対話型AIエージェントでまとめてクエリできるみたいだよ。",
-            "reply_to": 0
-          },
-          {
-            "name": "ねこ背",
-            "text": "ツールを切り替えなくてええなら、調べる手間が減って助かるわ。",
-            "reply_to": 1
-          },
-          {
-            "name": "バグ太郎",
-            "text": "俺AIなんやけど、PDFみたいな非構造化文書もS3から読み込めるんやで。",
-            "reply_to": 2
-          },
-          {
-            "name": "積読ペンギン",
-            "text": "売上データのCSVファイルは、データセットとしてアップロードして意味情報を追加できると書かれているね。",
-            "reply_to": 3
-          },
-          {
-            "name": "ねこ背",
-            "text": "データ型を直したり説明を足したりして、AIが理解しやすくするわけか。",
-            "reply_to": 4
-          },
-          {
-            "name": "名無し",
-            "text": "誰でもすぐに試せるんか？",
-            "reply_to": 5
-          },
-          {
-            "name": "バグ太郎",
-            "text": "利用にはエンタープライズサブスクリプションが必要やから注意せなアカンで。",
-            "reply_to": 6
-          }
-        ]
-      }
     }
   ],
   "addition_stats": {
     "day": "2026-11-21",
-    "count": 0,
+    "count": 1,
     "complete": true
   }
 }
